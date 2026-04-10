@@ -12,9 +12,20 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 Write-Host ".env created - fill in your values"
 
-# 4. Pull Ollama models (after docker compose is up)
-# Run this after: docker compose up -d
-# ollama pull mistral
-# ollama pull nomic-embed-text
+# 4. Start infrastructure
+Write-Host "Starting Docker containers..."
+docker compose -f infra/docker-compose.yml up -d
 
-Write-Host "Setup complete. Next: docker compose up -d"
+# 5. Wait a moment for Ollama to be ready
+Start-Sleep -Seconds 5
+
+# 6. Pull Ollama models
+Write-Host "Pulling Mistral model (this will take a few minutes)..."
+docker exec ollama ollama pull mistral
+
+Write-Host "Pulling embedding model..."
+docker exec ollama ollama pull nomic-embed-text
+
+Write-Host ""
+Write-Host "Setup complete. Now run:"
+Write-Host "uvicorn api.main:app --reload"
