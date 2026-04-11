@@ -7,7 +7,7 @@ from api.settings import settings
 
 router = APIRouter()
 
-class ChatRequest(__BaseModel__):
+class ChatRequest(BaseModel):
     question: str
     
 @router.post('/chat')
