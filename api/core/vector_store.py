@@ -7,7 +7,6 @@ client = QdrantClient(url=settings.qdrant_url)
 def ensure_collection():
     '''
     Create the Qdrant collection if it doesn't exist.
-    A collection is like a table in a database - it holds all your vectors.
     '''
     collections = client.get_collections().collections
     names = [c.name for c in collections]
@@ -16,7 +15,7 @@ def ensure_collection():
         client.create_collection(
             collection_name=settings.collection_name,
             vectors_config=VectorParams(
-                size=768,
+                size=settings.embedding_size,
                 distance=Distance.COSINE
             )
         )

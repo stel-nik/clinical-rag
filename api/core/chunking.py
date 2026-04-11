@@ -7,12 +7,12 @@ def chunk_text(
     Split text into overlapping chunks.
     
     Args:
-        text (str): The input text to be chunked.
-        chunk_size (int): Number of words per chunk.
-        overlap (int): Number of words to repeat between chunks.
+        text: The input text to be chunked.
+        chunk_size: Number of words per chunk.
+        overlap: Number of words to repeat between chunks.
     
     Returns:
-        List[str]: A list of text chunks.
+        List: List of text chunks.
     
     '''
     
