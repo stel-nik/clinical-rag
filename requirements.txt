@@ -4,3 +4,4 @@ pydantic-settings
 qdrant-client
 httpx
 python-multipart
+mcp
