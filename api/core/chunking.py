@@ -23,7 +23,7 @@ def chunk_text(
     while start < len(words):
         end = start + chunk_size
         chunk = ' '.join(words[start:end])
-        chunks = chunks.append(chunk)
+        chunks.append(chunk)
         start += chunk_size - overlap
         
     return chunks
