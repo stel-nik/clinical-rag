@@ -5,9 +5,9 @@ from api.core.embeddings import embed_text
 from api.core.retrieval import search_chunks
 from api.settings import settings
 
-router = APIRouter
+router = APIRouter()
 
-class ChatRequest(BaseModel):
+class ChatRequest(__BaseModel__):
     question: str
     
 @router.post('/chat')
@@ -46,7 +46,7 @@ async def chat(request: ChatRequest):
     # step 4 - send to mistral
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f'{settings.ollama_url}/api/embed',
+            f'{settings.ollama_url}/api/generate',
             json={
                 'model': 'mistral',
                 'prompt': prompt,
