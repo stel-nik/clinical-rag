@@ -24,7 +24,7 @@ async def chat(request: ChatRequest):
     # step 1 - embed the question
     query_vector = await embed_text(request.question)
     
-    # step 2 - search quadrant
+    # step 2 - search qdrant
     chunks = search_chunks(query_vector, top_k=3)
     
     if not chunks:
@@ -48,7 +48,7 @@ async def chat(request: ChatRequest):
         response = await client.post(
             f'{settings.ollama_url}/api/generate',
             json={
-                'model': 'mistral',
+                'model':  settings.llm_model,
                 'prompt': prompt,
                 'stream': False
             },

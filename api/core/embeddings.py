@@ -11,7 +11,7 @@ async def embed_text(
         response = await client.post(
             f"{settings.ollama_url}/api/embed",
             json={
-                'model': 'nomic-embed-text',
+                'model': settings.embedding_model,
                 'input': text
             },
             timeout=30.0
