@@ -9,12 +9,12 @@ async def embed_text(
     '''
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f'{settings.ollama_url}/api/embeddings',
+            f"{settings.ollama_url}/api/embed",
             json={
                 'model': 'nomic-embed-text',
-                'prompt': text
+                'input': text
             },
             timeout=30.0
         )
         response.raise_for_status()
-        return response.json()['embedding']
+        return response.json()['embeddings'][0]
