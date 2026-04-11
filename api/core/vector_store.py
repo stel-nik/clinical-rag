@@ -14,7 +14,7 @@ def ensure_collection():
     
     if settings.collection_name not in names:
         client.create_collection(
-            collection_name=settings.collection_name
+            collection_name=settings.collection_name,
             vectors_config=VectorParams(
                 size=768,
                 distance=Distance.COSINE
