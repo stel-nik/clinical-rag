@@ -11,7 +11,7 @@ async def query_rag(question: str) -> str:
     Ask a question over indexed clinical documents.
     Returns an answer with citations from the source documents.
     '''
-    async with httpx.AssyncClient() as client:
+    async with httpx.AsyncClient() as client:
         response = await client.post(
             f'{API_URL}/chat',
             json={'question': question},
@@ -26,7 +26,7 @@ async def query_rag(question: str) -> str:
         source_texts = []
         for source in sources:
             source_texts.append(
-                f'- {source['document']} (score: {source['score']:.2f}): {source['text'][:100]}'
+                f"- {source['document']} (score: {source['score']:.2f}): {source['text'][:100]}"
             )
         sources_formatted = '\n'.join(source_texts)
         
@@ -52,7 +52,7 @@ async def ingest_document(file_path: str) -> str:
         response.raise_for_status()
         data = response.json()
         
-        return f'Successfully indexed {data['filename']} into {data['chunks']} chunks.'
+        return f"Successfully indexed {data['filename']} into {data['chunks']} chunks."
     
 if __name__ == '__main__':
     mcp.run()
