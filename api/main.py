@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from api.routes.documents import router as documents_router
 from api.settings import settings
+from api.routes.chat import router as chat_router
 
 app = FastAPI(
     title="ClinicalRAG",
@@ -9,6 +10,7 @@ app = FastAPI(
 )
 
 app.include_router(documents_router)
+app.include_router(chat_router)
 
 @app.get("/healthz")
 def health():
