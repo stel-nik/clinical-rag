@@ -10,7 +10,7 @@ async def ingest_document(file: UploadFile = File(...)):
     '''
     Upload the text file, chunk it, embed it and store in Qdrant.
     '''
-    if not file.filename.endswitch('.txt'):
+    if not file.filename.endswith('.txt'):
         raise HTTPException(status_code=400, detail= 'Only .txt files supported for now')
     
     text = (await file.read()).decode('utf-8')
