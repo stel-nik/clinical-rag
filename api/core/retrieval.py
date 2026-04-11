@@ -11,11 +11,11 @@ def search_chunks(
     Search Qdrant for the most similar chunks to the query vector.
     Returns the top_k most relevant chunks with their text.
     '''
-    results = client.search(
+    results = client.query_points(
         collection_name=settings.collection_name,
         query_vector=query_vector,
         limit=top_k
-    )    
+    ).points  
     
     chunks = []
     for result in results:
