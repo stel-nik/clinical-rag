@@ -12,7 +12,7 @@ def search_chunks(
     Returns the top_k most relevant chunks with their text.
     '''
     results = client.search(
-        collection_name=settings.collection_name.
+        collection_name=settings.collection_name,
         query_vector=query_vector,
         limit=top_k
     )    
