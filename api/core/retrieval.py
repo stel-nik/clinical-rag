@@ -13,7 +13,7 @@ def search_chunks(
     '''
     results = client.query_points(
         collection_name=settings.collection_name,
-        query_vector=query_vector,
+        query=query_vector,
         limit=top_k
     ).points  
     
