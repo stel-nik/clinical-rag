@@ -26,6 +26,9 @@ docker exec ollama ollama pull mistral
 Write-Host "Pulling embedding model..."
 docker exec ollama ollama pull nomic-embed-text
 
+Write-Host "Pulling agent model..."
+docker exec ollama ollama pull llama3.1
+
 Write-Host ""
 Write-Host "Setup complete. Now run:"
 Write-Host "uvicorn api.main:app --reload"
