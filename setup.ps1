@@ -16,9 +16,14 @@ docker compose -f infra/docker-compose.yml up -d --build
 Start-Sleep -Seconds 10
 
 # 6. Pull models
+Write-Host "Pulling models..."
 docker exec ollama ollama pull mistral
 docker exec ollama ollama pull nomic-embed-text
+docker exec ollama ollama pull llama3.1
 
+Write-Host ""
+Write-Host "Setup complete. Now run:"
+Write-Host "uvicorn api.main:app --reload"
 # 7. Ingest sample documents
 python scripts/ingest_all.py
 

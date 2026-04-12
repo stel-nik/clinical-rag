@@ -23,7 +23,7 @@ def main():
     print(f"Found {len(txt_files)} files to ingest...")
 
     for filepath in txt_files:
-        print(f"Ingesting {filepath.name}...")
+        print(f"Ingesting {filepath.name}")
         result = ingest_file(filepath)
         print(f"Done: {result}")
 
