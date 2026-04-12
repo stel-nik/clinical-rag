@@ -127,9 +127,7 @@ async def run_agent(user_goal:str):
                             
                         except Exception as e:
                             tool_result = f"Tool unavailable: {e}"
-                            print('tool call failed')
-                                      
-                        
+                            print('tool call failed')                                                              
                        
                         # add tool result to history so model can use it next         
                         messages.append(
