@@ -1,31 +1,26 @@
-# setup.ps1
-
-# 1. Create and activate a virtual environment
+# 1. Create virtual environment (still needed for MCP server and scripts)
 python -m venv .venv
-
 .\.venv\Scripts\Activate.ps1
 
-# 2. Install Python dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Copy environment variables template
+# 3. Copy environment variables
 Copy-Item .env.example .env
-Write-Host ".env created - fill in your values"
+Write-Host "Fill in your .env values before continuing"
 
-# 4. Start infrastructure
-Write-Host "Starting Docker containers..."
-docker compose -f infra/docker-compose.yml up -d
+# 4. Build and start everything
+docker compose -f infra/docker-compose.yml up -d --build
 
-# 5. Wait a moment for Ollama to be ready
-Start-Sleep -Seconds 5
+# 5. Wait for Ollama
+Start-Sleep -Seconds 10
 
-# 6. Pull Ollama models
-Write-Host "Pulling Mistral model (this will take a few minutes)..."
+# 6. Pull models
 docker exec ollama ollama pull mistral
-
-Write-Host "Pulling embedding model..."
 docker exec ollama ollama pull nomic-embed-text
 
-Write-Host ""
-Write-Host "Setup complete. Now run:"
-Write-Host "uvicorn api.main:app --reload"
+# 7. Ingest sample documents
+python scripts/ingest_all.py
+
+Write-Host "Setup complete!"
+Write-Host "MCP server: python mcp_server/server.py"
