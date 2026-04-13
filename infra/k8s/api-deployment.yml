@@ -15,9 +15,10 @@ spec:
     spec:
       containers:
         - name: api
-          # for local deployment, it does not pull image from cloud
+          # local minikube: uses locally loaded image
+          # production: replace with your registry e.g. mycompany.azurecr.io/clinical-rag-api:latest
           image: clinical-rag-api:latest
-          imagePullPolicy: Never
+          imagePullPolicy: Never # remove this for production
           ports:
             - containerPort: 8000
           envFrom:
