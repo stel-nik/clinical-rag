@@ -139,7 +139,7 @@ QDRANT_URL=http://qdrant:6333
 
 ## Running
 
-### Option 1 — Development mode (recommended for active development)
+### Option 1: Development mode (recommended for active development)
 
 FastAPI runs locally with auto-reload. Qdrant and Ollama run in Docker.
 
@@ -167,7 +167,7 @@ by whoever needs it.
 
 ---
 
-### Option 2 — Full Docker deployment
+### Option 2: Full Docker deployment
 
 Everything runs in Docker including FastAPI. Use this to test the production setup 
 or when you are done developing.
@@ -204,7 +204,7 @@ Docker maps port 8000 from the container to your machine.
 
 ---
 
-### Option 3 — Local Kubernetes with minikube
+### Option 3: Local Kubernetes with minikube
 
 ```bash
 # start cluster
@@ -250,7 +250,7 @@ The script finds all `.txt` files, chunks them, embeds each chunk, and stores th
 | `GET` | `/healthz` | Health check |
 | `GET` | `/metrics` | Basic metrics |
 
-### Example — ingest a document
+### Example: ingest a document
 
 ```bash
 curl -X POST http://localhost:8000/documents/ingest \
@@ -266,7 +266,7 @@ Response:
 }
 ```
 
-### Example — ask a question
+### Example: ask a question
 
 ```bash
 curl -X POST http://localhost:8000/chat \
@@ -350,7 +350,7 @@ entering a clinical trial. The investigator is responsible for ensuring
 that informed consent is obtained from each subject...
 ```
 
-The agent uses Llama3.1 as the reasoning model — no external services, no data leaving your machine.
+The agent uses Llama3.1 as the reasoning model. There are no external services or data leaving your machine.
 
 **Known limitation:** Llama3.1 8B has inconsistent tool calling compared to larger models. It gets the right answer but may call the tool more times than needed. A larger model like Llama3.1 70B would be more reliable but requires more VRAM.
 
@@ -417,28 +417,28 @@ The services are designed to be stateless with health check endpoints, making th
 
 ## Tradeoffs and next steps
 
-**What works well:**
+**Accomplished:**
 
-- Fully private, no data leaves the network
-- GPU-accelerated inference with good response times
-- Clean REST API with auto-generated Swagger UI at `/docs`, test all endpoints directly in the browser without any extra tooling
-- MCP integration works reliably with Claude Desktop
-- Private agent works with Llama3.1
-- Kubernetes manifests written and tested locally with minikube
+- Fully private, no data leaves the network.
+- GPU-accelerated inference.
+- REST API with auto-generated Swagger UI at `/docs`, test all endpoints directly in the browser without any extra tooling.
+- MCP integration works reliably with Claude Desktop.
+- Private agent works with Llama3.1.
+- Kubernetes manifests written and tested locally with minikube.
 
-**Known limitations:**
+**Limitations:**
 
-- Only `.txt` files supported. PDF parsing would require adding `pypdf` 
-- Llama3.1 8B tool calling is inconsistent — larger models are more reliable
-- Single Qdrant collection. No per-user or per-project isolation yet
-- No authentication on the API endpoints
-- Full GPU support requires WSL2 minikube on Windows (in progress)
+- Only `.txt` files supported. PDF parsing would require adding `pypdf`. 
+- Llama3.1 8B tool calling is inconsistent. Larger models are more reliable.
+- Single Qdrant collection. No per-user or per-project isolation yet.
+- No authentication on the API endpoints.
+- Full GPU support requires WSL2 minikube on Windows (in progress).
 
-**Next steps:**
+**Future Work:**
 
-- Add PDF support (in progress)
-- Add authentication to the API
-- Build a simple chat UI in Next.js
-- Deploy Kubernetes manifests to AKS
-- Add Prometheus metrics with real data (query count, latency, retrieval scores)
-- Evaluate larger models for the agent layer
+- Add PDF support (in progress).
+- Add authentication to the API.
+- Build a simple chat UI in Next.js.
+- Deploy Kubernetes manifests to AKS.
+- Add Prometheus metrics with real data (query count, latency, retrieval scores).
+- Evaluate larger models for the agent layer.
