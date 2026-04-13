@@ -914,4 +914,189 @@ This keeps resources separate from other applications in the same cluster, with 
 
 ---
 
+### Deployment plan
+
+This section explains the full path from local development to production Kubernetes deployment.
+
+---
+
+### Local development vs production
+
+There are two ways to run ClinicalRAG with Kubernetes:
+
+**Local testing with minikube** — a single-node Kubernetes cluster running on your machine inside Docker. No cloud account needed. Used to verify manifests are correct and understand how Kubernetes works. GPU passthrough is not supported — Ollama runs without GPU.
+
+**Production with AKS** — Azure Kubernetes Service. A real multi-node cluster in the cloud. GPU node pool for Ollama. Persistent storage for Qdrant. External IP for the API. This is the target architecture.
+
+---
+
+### Local setup with minikube — step by step
+
+**Prerequisites:**
+- Docker Desktop running
+- minikube installed: `winget install Kubernetes.minikube`
+- kubectl installed: `winget install Kubernetes.kubectl`
+
+**Every time you want to run locally:**
+
+```bash
+# 1. start the cluster
+minikube start
+
+# 2. build the API image from your Dockerfile
+docker build -t clinical-rag-api:latest .
+
+# 3. load the image into minikube's internal Docker
+#    (minikube cannot see your local Docker images directly)
+minikube image load clinical-rag-api:latest
+
+# 4. deploy all manifests
+minikube kubectl -- apply -f infra/k8s
+
+# 5. check all pods are Running
+minikube kubectl -- get pods
+
+# 6. check services
+minikube kubectl -- get services
+
+# 7. open a tunnel in a SEPARATE terminal to expose the API externally
+minikube tunnel
+
+# 8. open Swagger UI in browser
+# http://localhost/docs
+```
+
+**Important:** for local minikube testing, `api-deployment.yaml` must use:
+```yaml
+image: clinical-rag-api:latest
+imagePullPolicy: Never
+```
+
+`imagePullPolicy: Never` tells Kubernetes to use the locally loaded image instead of trying to pull from a registry.
+
+**To stop everything:**
+```bash
+minikube kubectl -- delete -f infra/k8s   # remove all resources
+minikube stop                              # stop the cluster
+```
+
+---
+
+### Useful commands while running
+
+```bash
+# see all running pods
+minikube kubectl -- get pods
+
+# see all services and their IPs
+minikube kubectl -- get services
+
+# see logs from a pod (replace pod name with actual name from get pods)
+minikube kubectl -- logs api-55c74dc977-6ncnf
+
+# stream live logs
+minikube kubectl -- logs api-55c74dc977-6ncnf --follow
+
+# see details about a pod (useful for debugging crashes)
+minikube kubectl -- describe pod api-55c74dc977-6ncnf
+
+# run a command inside a pod
+minikube kubectl -- exec -it api-55c74dc977-6ncnf -- bash
+
+# scale the API up or down
+minikube kubectl -- scale deployment api --replicas=3
+
+# apply changes after editing a manifest
+minikube kubectl -- apply -f infra/k8s
+```
+
+---
+
+### Docker commands for reference
+
+While running locally you have two environments simultaneously:
+
+| | Docker Compose | Kubernetes (minikube) |
+|--|--|--|
+| FastAPI | `http://localhost:8000` | `http://localhost:80` |
+| Qdrant | `http://localhost:6333` | internal only |
+| Ollama | `http://localhost:11434` | internal only |
+| Start | `docker compose up -d` | `minikube kubectl -- apply -f infra/k8s` |
+| Stop | `docker compose down` | `minikube kubectl -- delete -f infra/k8s` |
+| Logs | `docker logs api` | `minikube kubectl -- logs <pod-name>` |
+| Status | `docker ps` | `minikube kubectl -- get pods` |
+
+---
+
+### Production path — AKS
+
+For production deployment to Azure Kubernetes Service the additional steps are:
+
+**1. Push the API image to Azure Container Registry:**
+```bash
+# create a registry in Azure (one time)
+az acr create --name clinicalrag --resource-group myRG --sku Basic
+
+# build and push
+docker build -t clinicalrag.azurecr.io/clinical-rag-api:latest .
+docker push clinicalrag.azurecr.io/clinical-rag-api:latest
+```
+
+Then update `api-deployment.yaml`:
+```yaml
+image: clinicalrag.azurecr.io/clinical-rag-api:latest
+# remove imagePullPolicy: Never
+```
+
+**2. Create AKS cluster with GPU node pool:**
+```bash
+# create cluster
+az aks create --name clinicalrag-cluster --resource-group myRG
+
+# add GPU node pool for Ollama (NC-series VMs have NVIDIA GPUs)
+az aks nodepool add \
+  --cluster-name clinicalrag-cluster \
+  --name gpunodepool \
+  --node-vm-size Standard_NC6s_v3 \
+  --node-count 1
+```
+
+**3. Install NVIDIA device plugin** — allows Kubernetes to schedule pods with GPU requests:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/main/nvidia-device-plugin.yml
+```
+
+**4. Re-enable GPU request in `ollama-deployment.yaml`:**
+```yaml
+resources:
+  limits:
+    nvidia.com/gpu: 1
+```
+
+**5. Replace `emptyDir` with PersistentVolumeClaims** for Qdrant and Ollama so data survives pod restarts:
+```yaml
+volumes:
+  - name: qdrant-storage
+    persistentVolumeClaim:
+      claimName: qdrant-pvc
+```
+
+**6. Deploy:**
+```bash
+kubectl apply -f infra/k8s
+```
+
+---
+
+### Known limitations of current manifests
+
+| Limitation | Current | Production fix |
+|--|--|--|
+| Qdrant storage | `emptyDir` — lost on restart | PersistentVolumeClaim backed by Azure Disk |
+| Ollama models | `emptyDir` — re-downloaded on restart | PersistentVolumeClaim — models are 4-6GB each |
+| API image | placeholder URL | Push to Azure Container Registry |
+| GPU | commented out | Enable + GPU node pool in AKS |
+| Namespace | `default` | Dedicated `clinical-rag` namespace |
+
+
 *End of Architecture Deep Dive*
