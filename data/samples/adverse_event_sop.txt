@@ -1,0 +1,88 @@
+STANDARD OPERATING PROCEDURE: ADVERSE EVENT REPORTING
+
+Document ID: SOP-AE-001
+Version: 2.1
+Effective Date: January 2024
+Department: Clinical Operations
+
+1. PURPOSE
+
+This Standard Operating Procedure (SOP) defines the requirements and procedures for identifying, assessing, recording, and reporting adverse events (AEs) and serious adverse events (SAEs) occurring during clinical trials conducted by this organization. Compliance with this SOP ensures adherence to ICH E6 Good Clinical Practice (GCP) guidelines, local regulatory requirements, and sponsor protocols.
+
+2. SCOPE
+
+This SOP applies to all clinical trial staff including investigators, sub-investigators, study coordinators, and data managers involved in the conduct of interventional clinical trials at this site.
+
+3. DEFINITIONS
+
+Adverse Event (AE): Any untoward medical occurrence in a patient or clinical investigation subject administered a pharmaceutical product that does not necessarily have a causal relationship with the treatment.
+
+Serious Adverse Event (SAE): Any adverse event that results in death, is life-threatening, requires inpatient hospitalization or prolongation of existing hospitalization, results in persistent or significant disability or incapacity, is a congenital anomaly or birth defect, or is an important medical event that may jeopardize the subject or require medical or surgical intervention.
+
+Unexpected Adverse Event: An adverse event whose nature, severity, or frequency is not consistent with the applicable product information.
+
+Causality Assessment: The evaluation of the likelihood that a pharmaceutical product caused or contributed to an adverse event.
+
+4. RESPONSIBILITIES
+
+4.1 Principal Investigator
+The Principal Investigator (PI) is responsible for the overall conduct of the clinical trial at the site. The PI must ensure that all adverse events are properly identified, assessed for causality and severity, documented in the medical records and case report forms, and reported to the sponsor and regulatory authorities within required timelines. The PI must sign all SAE reports before submission.
+
+4.2 Study Coordinator
+The study coordinator is responsible for day-to-day monitoring of subject safety, collecting adverse event information from subjects at each visit, entering adverse event data into the electronic data capture system, alerting the PI to any new or worsening adverse events, and assisting the PI with SAE report preparation and submission.
+
+4.3 Data Manager
+The data manager is responsible for reviewing adverse event data for completeness and consistency, querying missing or inconsistent data, and ensuring all adverse event fields are completed prior to database lock.
+
+5. ADVERSE EVENT IDENTIFICATION AND ASSESSMENT
+
+5.1 Identification
+Adverse events may be identified through subject self-report during clinic visits, telephone contacts, or diaries. Staff should use open-ended questions to elicit adverse event information such as asking subjects whether they have experienced any health problems, illnesses, or changes in how they feel since the last visit. Leading questions that suggest specific symptoms should be avoided.
+
+5.2 Severity Assessment
+All adverse events must be graded according to the Common Terminology Criteria for Adverse Events (CTCAE) current version. Grade 1 indicates mild adverse events that are asymptomatic or have mild symptoms and require no intervention. Grade 2 indicates moderate adverse events that require minimal or local intervention. Grade 3 indicates severe adverse events that require hospitalization or are medically significant but not immediately life-threatening. Grade 4 indicates life-threatening consequences that require urgent intervention. Grade 5 indicates death related to the adverse event.
+
+5.3 Causality Assessment
+The PI must assess the causal relationship between the investigational product and each adverse event. The following categories are used: Not related, meaning the adverse event is clearly due to other causes. Unlikely related, meaning there is little reason to suspect a causal relationship. Possibly related, meaning there is reason to suspect a causal relationship but other causes are equally or more likely. Probably related, meaning there is good reason to suspect a causal relationship and other causes are less likely. Definitely related, meaning there is clear evidence of a causal relationship.
+
+6. DOCUMENTATION REQUIREMENTS
+
+6.1 Source Documents
+All adverse events must be documented in the subject medical record or source document at the time they are identified. Documentation must include the date of onset, description of the event, severity grade, causality assessment, action taken with the investigational product, concomitant medications, treatment provided, outcome, and date of resolution or notation that the event is ongoing.
+
+6.2 Case Report Forms
+Adverse event data must be entered into the electronic data capture system within two business days of identification. All fields must be completed. If information is not yet available, the field should be completed with the best available information and updated when additional information is obtained.
+
+7. REPORTING TIMELINES
+
+7.1 Serious Adverse Events
+All SAEs must be reported to the sponsor within 24 hours of the investigator becoming aware of the event, regardless of the day of the week or time of day. Initial reports may be made by telephone but must be followed by a written report within 24 hours. The written report must be submitted using the sponsor's SAE report form.
+
+7.2 Unexpected Serious Adverse Reactions
+Unexpected serious adverse reactions that are both serious and unexpected must be reported to the regulatory authority. Fatal or life-threatening unexpected serious adverse reactions must be reported within 7 calendar days of the sponsor becoming aware of the event. All other unexpected serious adverse reactions must be reported within 15 calendar days.
+
+7.3 Non-Serious Adverse Events
+Non-serious adverse events must be reported to the sponsor according to the schedule defined in the protocol, typically at each scheduled data collection timepoint or at study closeout.
+
+8. FOLLOW-UP REPORTING
+
+All SAEs must be followed until resolution, stabilization, or until the subject is lost to follow-up. Follow-up reports must be submitted to the sponsor whenever new information becomes available. The final follow-up report must indicate the outcome of the event and whether any causal relationship to the investigational product was established.
+
+9. PREGNANCIES
+
+Any pregnancy occurring during the trial must be reported to the sponsor within 24 hours of the investigator becoming aware of the pregnancy, regardless of whether the subject is receiving the investigational product or placebo. Pregnancy is not classified as an adverse event but requires reporting and follow-up for the outcome of the pregnancy and the health of the infant.
+
+10. RECORD RETENTION
+
+All adverse event documentation including source documents, case report forms, SAE reports, follow-up reports, and correspondence with the sponsor and regulatory authorities must be retained for a minimum of 15 years following the completion or termination of the trial, or longer if required by local regulations or the sponsor agreement.
+
+11. TRAINING
+
+All clinical trial staff must complete training on this SOP prior to participating in any clinical trial. Training must be documented in the site training log. Retraining is required whenever this SOP is updated and annually thereafter.
+
+12. REFERENCES
+
+ICH E6(R2) Good Clinical Practice Guideline
+ICH E2A Clinical Safety Data Management: Definitions and Standards for Expedited Reporting
+EU Clinical Trials Regulation 536/2014
+FDA 21 CFR Part 312 Investigational New Drug Application
