@@ -32,7 +32,11 @@ async def query_rag(question: str) -> str:
 
 @mcp.tool()
 async def ingest_document(file_path: str) -> str:
-    """Ingest a text file into the clinical RAG system."""
+    """Ingest a text file into the clinical RAG system.
+    The file_path must be an absolute path on the local machine
+    where the MCP server is running.
+    Example: C:\\Users\\stela\\Coding\\projects\\clinical-rag\\data\\samples\\file.txt
+    """
     path = Path(file_path)
 
     async with httpx.AsyncClient() as client:

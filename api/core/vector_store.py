@@ -1,3 +1,4 @@
+import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from api.settings import settings
@@ -28,18 +29,18 @@ def store_chunks(
     '''
     Store chunks and their embeddings in Qdrant.
     '''
-    points = [
-        PointStruct(
-            id=i,
-            vector=embeddings[i],
+    points = []
+    for i, (chunk, vector) in enumerate(zip(chunks, embeddings)):
+        point = PointStruct(
+            id=str(uuid.uuid4()), # unique ID per chunk — prevents overwriting when ingesting multiple documents 
+            vector=vector,
             payload={
-                'text': chunks[i],
-                'document': document_name,
-                'chunk_index': i
+                "text": chunk,
+                "document": document_name,
+                "chunk_index": i
             }
         )
-        for i in range(len(chunks))
-    ]
+        points.append(point)
     
     client.upsert(
         collection_name=settings.collection_name,
