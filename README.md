@@ -2,7 +2,7 @@
 
 A private, on-premises RAG system for clinical document Q&A. Built for regulated environments where sensitive documents cannot leave the network.
 
-Upload clinical documents, ask questions in natural language, and get accurate answers with source citations — all running on your own hardware, with no data sent to external services.
+Upload clinical documents, ask questions in natural language, and get accurate answers with source citations. The whole process is running on your own hardware, with no data sent to external services.
 
 ---
 
@@ -23,13 +23,13 @@ ClinicalRAG runs entirely on local hardware:
 
 ![ClinicalRAG Architecture](docs/architecture.svg)
 
-ClinicalRAG has three ways to interact — all backed by the same on-prem pipeline:
+ClinicalRAG has three ways to interact, all backed by the same on-prem pipeline:
 
-**REST API** — call `POST /chat` directly or use Swagger UI at `http://localhost:8000/docs`
+**REST API**: Call `POST /chat` directly or use Swagger UI at `http://localhost:8000/docs`
 
-**Claude Desktop + MCP** — Claude acts as the AI agent. It automatically launches the MCP server as a background process, discovers the `query_rag` and `ingest_document` tools, and calls them when you ask clinical questions.
+**Claude Desktop + MCP**: Claude acts as the AI agent. It automatically launches the MCP server as a background process, discovers the `query_rag` and `ingest_document` tools, and calls them when you ask clinical questions.
 
-**Private terminal agent** — Llama3.1 acts as the agent entirely on your GPU. It also launches the MCP server automatically as a background process, calls `query_rag`, and returns answers. Nothing leaves your machine.
+**Private terminal agent**: Llama3.1 acts as the agent entirely on your GPU. It also launches the MCP server automatically as a background process, calls `query_rag`, and returns answers. Nothing leaves your machine.
 
 When using Claude Desktop, the generated answer passes through Anthropic's servers. The private agent and REST API are fully on-prem with no external services.
 
@@ -41,7 +41,7 @@ When using Claude Desktop, the generated answer passes through Anthropic's serve
 |-------|------|------|
 | `nomic-embed-text` | Converts text to vectors for semantic search | 300MB |
 | `mistral 7B` | Reads retrieved context and generates answers | 4GB |
-| `llama3.1 8B` | Agent reasoning — decides which tools to call | 6GB |
+| `llama3.1 8B` | Agent reasoning, decides which tools to call | 6GB |
 
 All three run via Ollama on your GPU.
 
@@ -153,16 +153,16 @@ uvicorn api.main:app --reload
 
 Then use whichever interface you want:
 
-**Claude Desktop** — just open the app. It automatically launches `mcp_server/server.py` 
+**Claude Desktop** -> just open the app. It automatically launches `mcp_server/server.py` 
 in the background based on your config file. No manual step needed.
 
-**Private terminal agent** — run in a new terminal:
+**Private terminal agent** -> run in a new terminal:
 ```bash
 python agent/agent.py
 ```
 This also launches `mcp_server/server.py` automatically as a subprocess. No manual step needed.
 
-You never need to run `mcp_server/server.py` directly — it is always launched automatically 
+You never need to run `mcp_server/server.py` directly, it is always launched automatically 
 by whoever needs it.
 
 ---
@@ -172,17 +172,17 @@ by whoever needs it.
 Everything runs in Docker including FastAPI. Use this to test the production setup 
 or when you are done developing.
 
-**First time or after code changes** — rebuild and start:
+**First time or after code changes** -> rebuild and start:
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-**Daily use** — start without rebuilding (faster):
+**Daily use** -> start without rebuilding (faster):
 ```bash
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-**Ingest your documents** (skip if you already ran `setup.ps1` — 
+**Ingest your documents** -> (skip if you already ran `setup.ps1`, 
 data persists in the Docker volume between restarts):
 ```bash
 python scripts/ingest_all.py
@@ -190,9 +190,9 @@ python scripts/ingest_all.py
 
 **Then use whichever interface you want:**
 
-Claude Desktop — just open the app, it connects automatically.
+Claude Desktop -> just open the app, it connects automatically.
 
-Private agent — run in a new terminal:
+Private agent -> run in a new terminal:
 ```bash
 python agent/agent.py
 ```
@@ -296,9 +296,9 @@ You can also test all endpoints via the auto-generated Swagger UI at `http://loc
 
 The MCP server exposes two tools to AI agents:
 
-`query_rag` — ask a question over indexed clinical documents, returns answer with citations
+`query_rag`: ask a question over indexed clinical documents, returns answer with citations
 
-`ingest_document` — ingest a text file into the system by providing a file path
+`ingest_document`: ingest a text file into the system by providing a file path
 
 Both tools are available to Claude Desktop.
 
@@ -419,18 +419,18 @@ The services are designed to be stateless with health check endpoints, making th
 
 **What works well:**
 
-- Fully private — no data leaves the network
+- Fully private, no data leaves the network
 - GPU-accelerated inference with good response times
-- Clean REST API with auto-generated Swagger UI at `/docs` — test all endpoints directly in the browser without any extra tooling
+- Clean REST API with auto-generated Swagger UI at `/docs`, test all endpoints directly in the browser without any extra tooling
 - MCP integration works reliably with Claude Desktop
 - Private agent works with Llama3.1
 - Kubernetes manifests written and tested locally with minikube
 
 **Known limitations:**
 
-- Only `.txt` files supported — PDF parsing would require adding `pypdf` 
+- Only `.txt` files supported. PDF parsing would require adding `pypdf` 
 - Llama3.1 8B tool calling is inconsistent — larger models are more reliable
-- Single Qdrant collection — no per-user or per-project isolation yet
+- Single Qdrant collection. No per-user or per-project isolation yet
 - No authentication on the API endpoints
 - Full GPU support requires WSL2 minikube on Windows (in progress)
 
