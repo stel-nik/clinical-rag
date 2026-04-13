@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          # local minikube: uses locally loaded image
+          # production: replace with your registry e.g. mycompany.azurecr.io/clinical-rag-api:latest
+          image: clinical-rag-api:latest
+          imagePullPolicy: Never # remove this for production
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: clinicalrag-config
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3

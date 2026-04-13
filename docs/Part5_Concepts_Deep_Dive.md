@@ -573,6 +573,10 @@ Kubernetes calls `GET /healthz` every 30 seconds. If it returns 200, the pod is 
 
 ### The manifest files for this project
 
+There are 7 files in total. Every service needs a Deployment (what to run) and a Service (how to find it).
+
+---
+
 **`configmap.yaml`:**
 
 ```yaml
@@ -580,6 +584,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: clinicalrag-config
+  namespace: default
 data:
   OLLAMA_URL: "http://ollama-service:11434"
   QDRANT_URL: "http://qdrant-service:6333"
@@ -600,6 +605,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qdrant
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -627,7 +633,14 @@ spec:
 
 `emptyDir: {}` — temporary storage, lost if the pod restarts. For production replace with a PersistentVolumeClaim backed by Azure Disk.
 
-`selector.matchLabels` and `template.metadata.labels` must match — this is how the Deployment finds and manages its pods.
+`selector.matchLabels` tells the Deployment which pods it "owns" and manages. `template.metadata.labels` is what it stamps on each pod it creates. These two must always match — if they don't, the Deployment can't find its own pods. The label `app: qdrant` is the glue between the Deployment and its Service.
+
+Deployment\
+  selector.matchLabels: app: qdrant  ← "I own pods with this label"\
+  template.labels: app: qdrant       ← "stamp this on every pod I create"
+
+Service\
+  selector: app: qdrant              ← "send traffic to pods with this label"
 
 ---
 
@@ -638,6 +651,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: qdrant-service
+  namespace: default
 spec:
   selector:
     app: qdrant
@@ -646,28 +660,77 @@ spec:
       targetPort: 6333
 ```
 
-`ClusterIP` type (default) — only accessible inside the cluster. Qdrant should not be exposed to the internet.
+`selector: app: qdrant` — matches the label on the Qdrant pods. Traffic sent to `qdrant-service:6333` is routed to any pod with `app: qdrant`.
+
+`ClusterIP` type (default) — only accessible inside the cluster. Qdrant should never be exposed to the internet.
+
+`port` vs `targetPort` — `port` is what other services use to reach this service. `targetPort` is the port the container actually listens on. Both are 6333 here but they can differ.
 
 ---
 
-**`ollama-deployment.yaml`** — the GPU-specific part:
+**`ollama-deployment.yaml`:**
 
 ```yaml
-containers:
-  - name: ollama
-    image: ollama/ollama:latest
-    resources:
-      limits:
-        nvidia.com/gpu: 1
-    volumeMounts:
-      - name: ollama-models
-        mountPath: /root/.ollama
-volumes:
-  - name: ollama-models
-    emptyDir: {}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+            - containerPort: 11434
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: ollama-models
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-models
+          emptyDir: {}
 ```
 
-`nvidia.com/gpu: 1` — requests one GPU. Kubernetes will only schedule this pod on a node that has an available GPU. In AKS this requires a GPU node pool (NC-series VMs). The NVIDIA device plugin must be installed in the cluster.
+`replicas: 1` — only one Ollama instance. Multiple replicas would each need their own GPU and would each need to download all models separately.
+
+`app: ollama` — the label that connects this Deployment to its Service. Without this label the Service cannot find the pods.
+
+`nvidia.com/gpu: 1` — requests one GPU from the node. Kubernetes will only schedule this pod on a node that has an available GPU. In AKS this requires a GPU node pool (NC-series VMs). The NVIDIA device plugin must be installed in the cluster.
+
+`mountPath: /root/.ollama` — where Ollama stores downloaded models. Using `emptyDir` means models are lost if the pod restarts and must be re-downloaded. For production use a PersistentVolumeClaim — model files are large (4-6GB each) and slow to download.
+
+---
+
+**`ollama-service.yaml`:**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: default
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+      targetPort: 11434
+```
+
+`name: ollama-service` — this is the name FastAPI uses in `OLLAMA_URL: "http://ollama-service:11434"` in the ConfigMap. The name here must exactly match the URL in the ConfigMap.
+
+`ClusterIP` type (default) — only accessible inside the cluster. Ollama should not be exposed to the internet.
 
 ---
 
@@ -678,6 +741,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api
+  namespace: default
 spec:
   replicas: 2
   selector:
@@ -702,13 +766,58 @@ spec:
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 30
+            failureThreshold: 3
 ```
 
-`replicas: 2` — FastAPI is stateless so two copies give availability without coordination.
+`replicas: 2` — FastAPI is stateless so two copies give availability. If one pod crashes or is being updated, the other continues serving requests.
 
-`envFrom.configMapRef` — reads all key-value pairs from the ConfigMap and injects them as environment variables. This is how Kubernetes replaces your `.env` file.
+`envFrom.configMapRef` — reads all key-value pairs from the ConfigMap and injects them as environment variables. This is how Kubernetes replaces your `.env` file. pydantic-settings reads them exactly the same way.
 
-`image: your-registry/clinical-rag-api:latest` — the Docker image built from your Dockerfile, pushed to a container registry.
+`image: your-registry/clinical-rag-api:latest` — the Docker image built from your Dockerfile and pushed to a container registry (Azure Container Registry, Docker Hub). Replace `your-registry` with your actual registry URL.
+
+`livenessProbe` — Kubernetes pings `/healthz` every 30 seconds. If it fails 3 times in a row the pod is killed and restarted.
+
+`initialDelaySeconds: 10` — wait 10 seconds before first health check. Gives FastAPI time to start up before Kubernetes starts checking.
+
+---
+
+**`api-service.yaml`:**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: default
+spec:
+  selector:
+    app: api
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+```
+
+`type: LoadBalancer` — unlike Qdrant and Ollama which use `ClusterIP` (internal only), the API needs to be reachable from outside the cluster. `LoadBalancer` provisions an external IP address in AKS automatically.
+
+`port: 80` vs `targetPort: 8000` — external traffic arrives on port 80 (standard HTTP). The Service forwards it to port 8000 where FastAPI is listening inside the container.
+
+`selector: app: api` — routes traffic to pods with the `app: api` label, matching the pods created by `api-deployment.yaml`.
+
+---
+
+### How the files connect
+
+```
+configmap.yaml
+    ↓ environment variables injected into
+api-deployment.yaml  →  api-service.yaml (LoadBalancer, port 80→8000)
+    ↓ calls via HTTP
+qdrant-deployment.yaml  →  qdrant-service.yaml (ClusterIP, port 6333)
+ollama-deployment.yaml  →  ollama-service.yaml (ClusterIP, port 11434)
+```
+
+The Service names in `configmap.yaml` (`ollama-service`, `qdrant-service`) must exactly match the `metadata.name` in `ollama-service.yaml` and `qdrant-service.yaml`. That is the only hard coupling between files.
 
 ---
 
@@ -804,5 +913,363 @@ metadata:
 This keeps resources separate from other applications in the same cluster, with independent access controls and resource quotas.
 
 ---
+
+### Deployment plan
+
+This section explains the full path from local development to production Kubernetes deployment.
+
+---
+
+### Local development vs production
+
+There are two ways to run ClinicalRAG with Kubernetes:
+
+**Local testing with minikube** — a single-node Kubernetes cluster running on your machine inside Docker. No cloud account needed. Used to verify manifests are correct and understand how Kubernetes works. GPU passthrough is not supported — Ollama runs without GPU.
+
+**Production with AKS** — Azure Kubernetes Service. A real multi-node cluster in the cloud. GPU node pool for Ollama. Persistent storage for Qdrant. External IP for the API. This is the target architecture.
+
+---
+
+### Local setup with minikube — step by step
+
+**Prerequisites:**
+- Docker Desktop running
+- minikube installed: `winget install Kubernetes.minikube`
+- kubectl installed: `winget install Kubernetes.kubectl`
+
+**Every time you want to run locally:**
+
+```bash
+# 1. start the cluster
+minikube start
+
+# 2. build the API image from your Dockerfile
+docker build -t clinical-rag-api:latest .
+
+# 3. load the image into minikube's internal Docker
+#    (minikube cannot see your local Docker images directly)
+minikube image load clinical-rag-api:latest
+
+# 4. deploy all manifests
+minikube kubectl -- apply -f infra/k8s
+
+# 5. check all pods are Running
+minikube kubectl -- get pods
+
+# 6. check services
+minikube kubectl -- get services
+
+# 7. open a tunnel in a SEPARATE terminal to expose the API externally
+minikube tunnel
+
+# 8. open Swagger UI in browser
+# http://localhost/docs
+```
+
+**Important:** for local minikube testing, `api-deployment.yaml` must use:
+```yaml
+image: clinical-rag-api:latest
+imagePullPolicy: Never
+```
+
+`imagePullPolicy: Never` tells Kubernetes to use the locally loaded image instead of trying to pull from a registry.
+
+**To stop everything:**
+```bash
+minikube kubectl -- delete -f infra/k8s   # remove all resources
+minikube stop                              # stop the cluster
+```
+
+---
+
+### Useful commands while running
+
+```bash
+# see all running pods
+minikube kubectl -- get pods
+
+# see all services and their IPs
+minikube kubectl -- get services
+
+# see logs from a pod (replace pod name with actual name from get pods)
+minikube kubectl -- logs api-55c74dc977-6ncnf
+
+# stream live logs
+minikube kubectl -- logs api-55c74dc977-6ncnf --follow
+
+# see details about a pod (useful for debugging crashes)
+minikube kubectl -- describe pod api-55c74dc977-6ncnf
+
+# run a command inside a pod
+minikube kubectl -- exec -it api-55c74dc977-6ncnf -- bash
+
+# scale the API up or down
+minikube kubectl -- scale deployment api --replicas=3
+
+# apply changes after editing a manifest
+minikube kubectl -- apply -f infra/k8s
+```
+
+---
+
+### Docker commands for reference
+
+While running locally you have two environments simultaneously:
+
+| | Docker Compose | Kubernetes (minikube) |
+|--|--|--|
+| FastAPI | `http://localhost:8000` | `http://localhost:80` |
+| Qdrant | `http://localhost:6333` | internal only |
+| Ollama | `http://localhost:11434` | internal only |
+| Start | `docker compose up -d` | `minikube kubectl -- apply -f infra/k8s` |
+| Stop | `docker compose down` | `minikube kubectl -- delete -f infra/k8s` |
+| Logs | `docker logs api` | `minikube kubectl -- logs <pod-name>` |
+| Status | `docker ps` | `minikube kubectl -- get pods` |
+
+---
+
+### Production path — AKS
+
+For production deployment to Azure Kubernetes Service the additional steps are:
+
+**1. Push the API image to Azure Container Registry:**
+```bash
+# create a registry in Azure (one time)
+az acr create --name clinicalrag --resource-group myRG --sku Basic
+
+# build and push
+docker build -t clinicalrag.azurecr.io/clinical-rag-api:latest .
+docker push clinicalrag.azurecr.io/clinical-rag-api:latest
+```
+
+Then update `api-deployment.yaml`:
+```yaml
+image: clinicalrag.azurecr.io/clinical-rag-api:latest
+# remove imagePullPolicy: Never
+```
+
+**2. Create AKS cluster with GPU node pool:**
+```bash
+# create cluster
+az aks create --name clinicalrag-cluster --resource-group myRG
+
+# add GPU node pool for Ollama (NC-series VMs have NVIDIA GPUs)
+az aks nodepool add \
+  --cluster-name clinicalrag-cluster \
+  --name gpunodepool \
+  --node-vm-size Standard_NC6s_v3 \
+  --node-count 1
+```
+
+**3. Install NVIDIA device plugin** — allows Kubernetes to schedule pods with GPU requests:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/main/nvidia-device-plugin.yml
+```
+
+**4. Re-enable GPU request in `ollama-deployment.yaml`:**
+```yaml
+resources:
+  limits:
+    nvidia.com/gpu: 1
+```
+
+**5. Replace `emptyDir` with PersistentVolumeClaims** for Qdrant and Ollama so data survives pod restarts:
+```yaml
+volumes:
+  - name: qdrant-storage
+    persistentVolumeClaim:
+      claimName: qdrant-pvc
+```
+
+**6. Deploy:**
+```bash
+kubectl apply -f infra/k8s
+```
+
+---
+
+### Known limitations of current manifests
+
+| Limitation | Current | Production fix |
+|--|--|--|
+| Qdrant storage | `emptyDir` — lost on restart | PersistentVolumeClaim backed by Azure Disk |
+| Ollama models | `emptyDir` — re-downloaded on restart | PersistentVolumeClaim — models are 4-6GB each |
+| API image | placeholder URL | Push to Azure Container Registry |
+| GPU | commented out | Enable + GPU node pool in AKS |
+| Namespace | `default` | Dedicated `clinical-rag` namespace |
+
+### Running Kubernetes locally — what actually happened
+
+This section documents the real experience of running the ClinicalRAG manifests locally with minikube, including the GPU limitation on Windows.
+
+---
+
+### What worked
+
+All services except Ollama ran successfully in Kubernetes on Windows with minikube.
+
+The full sequence that got everything running:
+
+```bash
+# install minikube (PowerShell)
+winget install Kubernetes.minikube
+winget install Kubernetes.kubectl
+
+# start the cluster
+minikube start
+
+# build the API image from Dockerfile
+docker build -t clinical-rag-api:latest .
+
+# load image into minikube's internal Docker
+# (minikube cannot see your local Docker images directly)
+minikube image load clinical-rag-api:latest
+
+# deploy all manifests
+minikube kubectl -- apply -f infra/k8s
+
+# check pods
+minikube kubectl -- get pods
+
+# open tunnel in a separate terminal to expose the API
+minikube tunnel
+
+# FastAPI now accessible at
+# http://localhost/docs
+```
+
+Result:
+```
+NAME                      READY   STATUS    RESTARTS   AGE
+api-55c74dc977-lvfdb      1/1     Running   0          4m51s
+api-55c74dc977-vs2qp      1/1     Running   0          4m51s
+ollama-85cbc977f8-wtgt7   0/1     Pending   0          4m51s
+qdrant-78ccbbccfd-txnfr   1/1     Running   0          4m51s
+```
+
+Two FastAPI replicas running, Qdrant running, Ollama pending due to GPU issue.
+
+Services:
+```
+NAME             TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)
+api-service      LoadBalancer   10.101.106.86    127.0.0.1     80:31204/TCP
+ollama-service   ClusterIP      10.107.249.160   <none>        11434/TCP
+qdrant-service   ClusterIP      10.97.249.178    <none>        6333/TCP
+```
+
+FastAPI Swagger UI confirmed working at `http://localhost/docs` running inside Kubernetes.
+
+---
+
+### The GPU problem on Windows
+
+Ollama stayed in `Pending` state. Inspecting the pod:
+
+```bash
+minikube kubectl -- describe pod ollama-85cbc977f8-wtgt7
+```
+
+The Events section showed:
+```
+Warning  FailedScheduling  0/1 nodes are available: 1 Insufficient nvidia.com/gpu.
+```
+
+Kubernetes could see the nvidia-device-plugin was installed:
+```bash
+minikube kubectl -- get nodes -o json | findstr nvidia
+# returns: "name": "nvidia"
+```
+
+But the plugin reported 0 available GPUs. The RTX 3090 was confirmed working in WSL2 (`nvidia-smi` returned full GPU info) but Docker Desktop on Windows does not pass GPU hardware through to the minikube container.
+
+---
+
+### Why this happens
+
+Minikube on Windows runs inside a Docker container managed by Docker Desktop. Docker Desktop uses WSL2 as its backend but does not expose the host GPU to containers running inside it in a way that Kubernetes can schedule against.
+
+The nvidia-device-plugin loads successfully and Kubernetes knows the resource type exists — but no node reports any available GPUs, so pods requesting `nvidia.com/gpu: 1` cannot be scheduled.
+
+This is a known limitation of Docker Desktop on Windows for GPU workloads in Kubernetes.
+
+---
+
+### The fix — WSL2 minikube (post-interview task)
+
+Running minikube directly inside WSL2 instead of through Docker Desktop gives proper GPU access. The RTX 3090 is already accessible in WSL2 as confirmed by `nvidia-smi`.
+
+The steps:
+
+```bash
+# install minikube in WSL2
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# delete existing Windows cluster first
+minikube delete --purge
+
+# start with GPU support from WSL2
+minikube start --driver=docker --gpus=all
+```
+
+The `--purge` flag removes all certificates and state — necessary because the Windows minikube certificates conflict with WSL2.
+
+After this, all commands run from the WSL2 terminal instead of PowerShell.
+
+**Note:** this replaces the Windows minikube cluster. You cannot run both simultaneously.
+
+---
+
+### Current state
+
+For local development Docker Compose remains the working setup:
+
+```bash
+# start infrastructure
+docker compose -f infra/docker-compose.yml up -d
+
+# start FastAPI
+uvicorn api.main:app --reload
+```
+
+Kubernetes manifests are complete and correct. The only limitation is GPU scheduling on Windows minikube. Once the WSL2 minikube setup is done, all four pods will run with full GPU support.
+
+---
+
+### To stop and clean up minikube
+
+```bash
+# stop the cluster
+minikube stop
+
+# delete everything (when done experimenting)
+minikube delete
+```
+
+After stopping minikube, start Docker Compose back up:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+---
+
+### Summary of what Kubernetes adds over Docker Compose
+
+Running the manifests locally demonstrated several real Kubernetes behaviours:
+
+**Automatic pod naming** — pods get random suffixes (`api-55c74dc977-lvfdb`). This is how Kubernetes tracks individual instances of a deployment.
+
+**Replicas** — two API pods ran simultaneously because `replicas: 2` was set. Docker Compose has no equivalent for this without extra tooling.
+
+**Service discovery** — pods communicated with each other via Service names (`qdrant-service`, `ollama-service`) without knowing each other's IPs.
+
+**LoadBalancer** — `minikube tunnel` assigned `127.0.0.1` as the external IP for `api-service`, demonstrating how a cloud LoadBalancer would assign a public IP in AKS.
+
+**Health checks** — the `livenessProbe` on the API deployment was active. Kubernetes would automatically restart any pod that failed `/healthz` three times.
+
+**Unchanged application code** — FastAPI ran identically inside Kubernetes as it does locally. No code changes were needed. The only difference was the environment variables came from the ConfigMap instead of `.env`.
+
+
 
 *End of Architecture Deep Dive*
