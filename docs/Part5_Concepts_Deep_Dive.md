@@ -1098,5 +1098,178 @@ kubectl apply -f infra/k8s
 | GPU | commented out | Enable + GPU node pool in AKS |
 | Namespace | `default` | Dedicated `clinical-rag` namespace |
 
+### Running Kubernetes locally — what actually happened
+
+This section documents the real experience of running the ClinicalRAG manifests locally with minikube, including the GPU limitation on Windows.
+
+---
+
+### What worked
+
+All services except Ollama ran successfully in Kubernetes on Windows with minikube.
+
+The full sequence that got everything running:
+
+```bash
+# install minikube (PowerShell)
+winget install Kubernetes.minikube
+winget install Kubernetes.kubectl
+
+# start the cluster
+minikube start
+
+# build the API image from Dockerfile
+docker build -t clinical-rag-api:latest .
+
+# load image into minikube's internal Docker
+# (minikube cannot see your local Docker images directly)
+minikube image load clinical-rag-api:latest
+
+# deploy all manifests
+minikube kubectl -- apply -f infra/k8s
+
+# check pods
+minikube kubectl -- get pods
+
+# open tunnel in a separate terminal to expose the API
+minikube tunnel
+
+# FastAPI now accessible at
+# http://localhost/docs
+```
+
+Result:
+```
+NAME                      READY   STATUS    RESTARTS   AGE
+api-55c74dc977-lvfdb      1/1     Running   0          4m51s
+api-55c74dc977-vs2qp      1/1     Running   0          4m51s
+ollama-85cbc977f8-wtgt7   0/1     Pending   0          4m51s
+qdrant-78ccbbccfd-txnfr   1/1     Running   0          4m51s
+```
+
+Two FastAPI replicas running, Qdrant running, Ollama pending due to GPU issue.
+
+Services:
+```
+NAME             TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)
+api-service      LoadBalancer   10.101.106.86    127.0.0.1     80:31204/TCP
+ollama-service   ClusterIP      10.107.249.160   <none>        11434/TCP
+qdrant-service   ClusterIP      10.97.249.178    <none>        6333/TCP
+```
+
+FastAPI Swagger UI confirmed working at `http://localhost/docs` running inside Kubernetes.
+
+---
+
+### The GPU problem on Windows
+
+Ollama stayed in `Pending` state. Inspecting the pod:
+
+```bash
+minikube kubectl -- describe pod ollama-85cbc977f8-wtgt7
+```
+
+The Events section showed:
+```
+Warning  FailedScheduling  0/1 nodes are available: 1 Insufficient nvidia.com/gpu.
+```
+
+Kubernetes could see the nvidia-device-plugin was installed:
+```bash
+minikube kubectl -- get nodes -o json | findstr nvidia
+# returns: "name": "nvidia"
+```
+
+But the plugin reported 0 available GPUs. The RTX 3090 was confirmed working in WSL2 (`nvidia-smi` returned full GPU info) but Docker Desktop on Windows does not pass GPU hardware through to the minikube container.
+
+---
+
+### Why this happens
+
+Minikube on Windows runs inside a Docker container managed by Docker Desktop. Docker Desktop uses WSL2 as its backend but does not expose the host GPU to containers running inside it in a way that Kubernetes can schedule against.
+
+The nvidia-device-plugin loads successfully and Kubernetes knows the resource type exists — but no node reports any available GPUs, so pods requesting `nvidia.com/gpu: 1` cannot be scheduled.
+
+This is a known limitation of Docker Desktop on Windows for GPU workloads in Kubernetes.
+
+---
+
+### The fix — WSL2 minikube (post-interview task)
+
+Running minikube directly inside WSL2 instead of through Docker Desktop gives proper GPU access. The RTX 3090 is already accessible in WSL2 as confirmed by `nvidia-smi`.
+
+The steps:
+
+```bash
+# install minikube in WSL2
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# delete existing Windows cluster first
+minikube delete --purge
+
+# start with GPU support from WSL2
+minikube start --driver=docker --gpus=all
+```
+
+The `--purge` flag removes all certificates and state — necessary because the Windows minikube certificates conflict with WSL2.
+
+After this, all commands run from the WSL2 terminal instead of PowerShell.
+
+**Note:** this replaces the Windows minikube cluster. You cannot run both simultaneously.
+
+---
+
+### Current state
+
+For local development Docker Compose remains the working setup:
+
+```bash
+# start infrastructure
+docker compose -f infra/docker-compose.yml up -d
+
+# start FastAPI
+uvicorn api.main:app --reload
+```
+
+Kubernetes manifests are complete and correct. The only limitation is GPU scheduling on Windows minikube. Once the WSL2 minikube setup is done, all four pods will run with full GPU support.
+
+---
+
+### To stop and clean up minikube
+
+```bash
+# stop the cluster
+minikube stop
+
+# delete everything (when done experimenting)
+minikube delete
+```
+
+After stopping minikube, start Docker Compose back up:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+---
+
+### Summary of what Kubernetes adds over Docker Compose
+
+Running the manifests locally demonstrated several real Kubernetes behaviours:
+
+**Automatic pod naming** — pods get random suffixes (`api-55c74dc977-lvfdb`). This is how Kubernetes tracks individual instances of a deployment.
+
+**Replicas** — two API pods ran simultaneously because `replicas: 2` was set. Docker Compose has no equivalent for this without extra tooling.
+
+**Service discovery** — pods communicated with each other via Service names (`qdrant-service`, `ollama-service`) without knowing each other's IPs.
+
+**LoadBalancer** — `minikube tunnel` assigned `127.0.0.1` as the external IP for `api-service`, demonstrating how a cloud LoadBalancer would assign a public IP in AKS.
+
+**Health checks** — the `livenessProbe` on the API deployment was active. Kubernetes would automatically restart any pod that failed `/healthz` three times.
+
+**Unchanged application code** — FastAPI ran identically inside Kubernetes as it does locally. No code changes were needed. The only difference was the environment variables came from the ConfigMap instead of `.env`.
+
+
 
 *End of Architecture Deep Dive*

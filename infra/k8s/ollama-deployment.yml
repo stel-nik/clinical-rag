@@ -18,9 +18,11 @@ spec:
           image: ollama/ollama:latest
           ports:
             - containerPort: 11434
-#          resources:
-#            limits:
-#              nvidia.com/gpu: 1
+# GPU support requires Linux or WSL2 minikube
+# Docker Desktop on Windows does not support GPU passthrough to minikube            
+          #resources:
+            #limits:
+              #nvidia.com/gpu: 1
           volumeMounts:
             - name: ollama-models
               mountPath: /root/.ollama
