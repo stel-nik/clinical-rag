@@ -573,6 +573,10 @@ Kubernetes calls `GET /healthz` every 30 seconds. If it returns 200, the pod is 
 
 ### The manifest files for this project
 
+There are 7 files in total. Every service needs a Deployment (what to run) and a Service (how to find it).
+
+---
+
 **`configmap.yaml`:**
 
 ```yaml
@@ -580,6 +584,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: clinicalrag-config
+  namespace: default
 data:
   OLLAMA_URL: "http://ollama-service:11434"
   QDRANT_URL: "http://qdrant-service:6333"
@@ -600,6 +605,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qdrant
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -627,7 +633,14 @@ spec:
 
 `emptyDir: {}` — temporary storage, lost if the pod restarts. For production replace with a PersistentVolumeClaim backed by Azure Disk.
 
-`selector.matchLabels` and `template.metadata.labels` must match — this is how the Deployment finds and manages its pods.
+`selector.matchLabels` tells the Deployment which pods it "owns" and manages. `template.metadata.labels` is what it stamps on each pod it creates. These two must always match — if they don't, the Deployment can't find its own pods. The label `app: qdrant` is the glue between the Deployment and its Service.
+
+Deployment\
+  selector.matchLabels: app: qdrant  ← "I own pods with this label"\
+  template.labels: app: qdrant       ← "stamp this on every pod I create"
+
+Service\
+  selector: app: qdrant              ← "send traffic to pods with this label"
 
 ---
 
@@ -638,6 +651,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: qdrant-service
+  namespace: default
 spec:
   selector:
     app: qdrant
@@ -646,28 +660,77 @@ spec:
       targetPort: 6333
 ```
 
-`ClusterIP` type (default) — only accessible inside the cluster. Qdrant should not be exposed to the internet.
+`selector: app: qdrant` — matches the label on the Qdrant pods. Traffic sent to `qdrant-service:6333` is routed to any pod with `app: qdrant`.
+
+`ClusterIP` type (default) — only accessible inside the cluster. Qdrant should never be exposed to the internet.
+
+`port` vs `targetPort` — `port` is what other services use to reach this service. `targetPort` is the port the container actually listens on. Both are 6333 here but they can differ.
 
 ---
 
-**`ollama-deployment.yaml`** — the GPU-specific part:
+**`ollama-deployment.yaml`:**
 
 ```yaml
-containers:
-  - name: ollama
-    image: ollama/ollama:latest
-    resources:
-      limits:
-        nvidia.com/gpu: 1
-    volumeMounts:
-      - name: ollama-models
-        mountPath: /root/.ollama
-volumes:
-  - name: ollama-models
-    emptyDir: {}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+            - containerPort: 11434
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: ollama-models
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-models
+          emptyDir: {}
 ```
 
-`nvidia.com/gpu: 1` — requests one GPU. Kubernetes will only schedule this pod on a node that has an available GPU. In AKS this requires a GPU node pool (NC-series VMs). The NVIDIA device plugin must be installed in the cluster.
+`replicas: 1` — only one Ollama instance. Multiple replicas would each need their own GPU and would each need to download all models separately.
+
+`app: ollama` — the label that connects this Deployment to its Service. Without this label the Service cannot find the pods.
+
+`nvidia.com/gpu: 1` — requests one GPU from the node. Kubernetes will only schedule this pod on a node that has an available GPU. In AKS this requires a GPU node pool (NC-series VMs). The NVIDIA device plugin must be installed in the cluster.
+
+`mountPath: /root/.ollama` — where Ollama stores downloaded models. Using `emptyDir` means models are lost if the pod restarts and must be re-downloaded. For production use a PersistentVolumeClaim — model files are large (4-6GB each) and slow to download.
+
+---
+
+**`ollama-service.yaml`:**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: default
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+      targetPort: 11434
+```
+
+`name: ollama-service` — this is the name FastAPI uses in `OLLAMA_URL: "http://ollama-service:11434"` in the ConfigMap. The name here must exactly match the URL in the ConfigMap.
+
+`ClusterIP` type (default) — only accessible inside the cluster. Ollama should not be exposed to the internet.
 
 ---
 
@@ -678,6 +741,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api
+  namespace: default
 spec:
   replicas: 2
   selector:
@@ -702,13 +766,58 @@ spec:
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 30
+            failureThreshold: 3
 ```
 
-`replicas: 2` — FastAPI is stateless so two copies give availability without coordination.
+`replicas: 2` — FastAPI is stateless so two copies give availability. If one pod crashes or is being updated, the other continues serving requests.
 
-`envFrom.configMapRef` — reads all key-value pairs from the ConfigMap and injects them as environment variables. This is how Kubernetes replaces your `.env` file.
+`envFrom.configMapRef` — reads all key-value pairs from the ConfigMap and injects them as environment variables. This is how Kubernetes replaces your `.env` file. pydantic-settings reads them exactly the same way.
 
-`image: your-registry/clinical-rag-api:latest` — the Docker image built from your Dockerfile, pushed to a container registry.
+`image: your-registry/clinical-rag-api:latest` — the Docker image built from your Dockerfile and pushed to a container registry (Azure Container Registry, Docker Hub). Replace `your-registry` with your actual registry URL.
+
+`livenessProbe` — Kubernetes pings `/healthz` every 30 seconds. If it fails 3 times in a row the pod is killed and restarted.
+
+`initialDelaySeconds: 10` — wait 10 seconds before first health check. Gives FastAPI time to start up before Kubernetes starts checking.
+
+---
+
+**`api-service.yaml`:**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: default
+spec:
+  selector:
+    app: api
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+```
+
+`type: LoadBalancer` — unlike Qdrant and Ollama which use `ClusterIP` (internal only), the API needs to be reachable from outside the cluster. `LoadBalancer` provisions an external IP address in AKS automatically.
+
+`port: 80` vs `targetPort: 8000` — external traffic arrives on port 80 (standard HTTP). The Service forwards it to port 8000 where FastAPI is listening inside the container.
+
+`selector: app: api` — routes traffic to pods with the `app: api` label, matching the pods created by `api-deployment.yaml`.
+
+---
+
+### How the files connect
+
+```
+configmap.yaml
+    ↓ environment variables injected into
+api-deployment.yaml  →  api-service.yaml (LoadBalancer, port 80→8000)
+    ↓ calls via HTTP
+qdrant-deployment.yaml  →  qdrant-service.yaml (ClusterIP, port 6333)
+ollama-deployment.yaml  →  ollama-service.yaml (ClusterIP, port 11434)
+```
+
+The Service names in `configmap.yaml` (`ollama-service`, `qdrant-service`) must exactly match the `metadata.name` in `ollama-service.yaml` and `qdrant-service.yaml`. That is the only hard coupling between files.
 
 ---
 
