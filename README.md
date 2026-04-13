@@ -204,6 +204,31 @@ Docker maps port 8000 from the container to your machine.
 
 ---
 
+### Option 3 — Local Kubernetes with minikube
+
+```bash
+# start cluster
+minikube start --gpus=all
+
+# build and load API image
+docker build -t clinical-rag-api:latest .
+minikube image load clinical-rag-api:latest
+
+# deploy
+minikube kubectl -- apply -f infra/k8s
+
+# expose API (separate terminal)
+minikube tunnel
+
+# open
+http://localhost/docs
+```
+
+Note: Ollama GPU scheduling requires WSL2 minikube on Windows.
+Full GPU support on Linux and AKS.
+
+---
+
 ## Ingesting documents
 
 Place `.txt` files in `data/samples/` and run:
@@ -357,7 +382,7 @@ clinical-rag/
 │   └── samples/             # Place .txt documents here
 ├── infra/
 │   ├── docker-compose.yml   # Ollama + Qdrant + API
-│   └── k8s/                 # Kubernetes manifests (in progress)
+│   └── k8s/                 # Kubernetes manifests
 ├── Dockerfile               # FastAPI container
 ├── requirements.txt
 ├── setup.ps1                # One-command setup script
@@ -399,17 +424,19 @@ The services are designed to be stateless with health check endpoints, making th
 - Clean REST API with auto-generated Swagger UI at `/docs` — test all endpoints directly in the browser without any extra tooling
 - MCP integration works reliably with Claude Desktop
 - Private agent works with Llama3.1
+- Kubernetes manifests written and tested locally with minikube
 
 **Known limitations:**
 
-- Only `.txt` files supported — PDF parsing would require adding `pypdf`
+- Only `.txt` files supported — PDF parsing would require adding `pypdf` 
 - Llama3.1 8B tool calling is inconsistent — larger models are more reliable
 - Single Qdrant collection — no per-user or per-project isolation yet
 - No authentication on the API endpoints
+- Full GPU support requires WSL2 minikube on Windows (in progress)
 
 **Next steps:**
 
-- Add PDF support
+- Add PDF support (in progress)
 - Add authentication to the API
 - Build a simple chat UI in Next.js
 - Deploy Kubernetes manifests to AKS
