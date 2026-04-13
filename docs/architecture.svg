@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="860" viewBox="0 0 900 860">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="900" height="860" fill="#ffffff"/>
+  <text x="170" y="18" font-family="system-ui,sans-serif" font-size="12" fill="#888" text-anchor="middle" font-weight="500">Clients</text>
+  <text x="560" y="18" font-family="system-ui,sans-serif" font-size="12" fill="#888" text-anchor="middle" font-weight="500">Your machine (on-prem)</text>
+  <line x1="320" y1="8" x2="320" y2="840" stroke="#ddd" stroke-width="1" stroke-dasharray="4 4"/>
+  <rect x="30" y="30" width="200" height="52" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="130" y="52" font-family="system-ui,sans-serif" font-size="13" fill="#2C2C2A" text-anchor="middle" font-weight="600">Claude Desktop</text>
+  <text x="130" y="70" font-family="system-ui,sans-serif" font-size="11" fill="#5F5E5A" text-anchor="middle">Anthropic cloud agent</text>
+  <rect x="30" y="110" width="200" height="52" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="130" y="132" font-family="system-ui,sans-serif" font-size="13" fill="#04342C" text-anchor="middle" font-weight="600">Private agent</text>
+  <text x="130" y="150" font-family="system-ui,sans-serif" font-size="11" fill="#085041" text-anchor="middle">Llama3.1 on your GPU</text>
+  <rect x="30" y="190" width="200" height="44" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="130" y="216" font-family="system-ui,sans-serif" font-size="12" fill="#2C2C2A" text-anchor="middle" font-weight="600">REST client / Swagger UI</text>
+  <rect x="340" y="50" width="210" height="72" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="445" y="76" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">MCP server</text>
+  <text x="445" y="94" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">tools: query_rag</text>
+  <text x="445" y="110" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">ingest_document</text>
+  <path d="M230 56 L338 80" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="278" y="60" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">stdio</text>
+  <path d="M230 136 L338 100" fill="none" stroke="#1D9E75" stroke-width="1" marker-end="url(#arrow-green)"/>
+  <text x="278" y="128" font-family="system-ui,sans-serif" font-size="10" fill="#1D9E75" text-anchor="middle">stdio</text>
+  <rect x="340" y="200" width="210" height="100" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="445" y="226" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">FastAPI</text>
+  <text x="445" y="246" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">POST /documents/ingest</text>
+  <text x="445" y="264" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">POST /chat</text>
+  <text x="445" y="282" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">GET /healthz  /metrics</text>
+  <line x1="445" y1="122" x2="445" y2="198" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="460" y="164" font-family="system-ui,sans-serif" font-size="10" fill="#888">HTTP</text>
+  <path d="M230 212 L338 240" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="278" y="220" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">HTTP</text>
+  <rect x="330" y="360" width="540" height="460" rx="14" fill="none" stroke="#ccc" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="600" y="380" font-family="system-ui,sans-serif" font-size="11" fill="#aaa" text-anchor="middle">Docker Compose</text>
+  <rect x="350" y="390" width="170" height="72" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="435" y="414" font-family="system-ui,sans-serif" font-size="13" fill="#042C53" text-anchor="middle" font-weight="600">Qdrant</text>
+  <text x="435" y="432" font-family="system-ui,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">port 6333</text>
+  <text x="435" y="450" font-family="system-ui,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">vectors + payloads</text>
+  <path d="M400 300 L400 388" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="385" y="346" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="end">store/search</text>
+  <rect x="350" y="510" width="490" height="280" rx="12" fill="none" stroke="#ccc" stroke-width="0.5" stroke-dasharray="4 3"/>
+  <text x="595" y="530" font-family="system-ui,sans-serif" font-size="11" fill="#aaa" text-anchor="middle">Ollama  port 11434  RTX 3090</text>
+  <rect x="365" y="540" width="460" height="56" rx="6" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+  <text x="595" y="562" font-family="system-ui,sans-serif" font-size="13" fill="#412402" text-anchor="middle" font-weight="600">nomic-embed-text</text>
+  <text x="595" y="580" font-family="system-ui,sans-serif" font-size="11" fill="#854F0B" text-anchor="middle">text to 768 vectors  300MB  embedding model</text>
+  <rect x="365" y="612" width="460" height="56" rx="6" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="595" y="634" font-family="system-ui,sans-serif" font-size="13" fill="#4A1B0C" text-anchor="middle" font-weight="600">Mistral 7B</text>
+  <text x="595" y="652" font-family="system-ui,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">generates answers from retrieved context  4GB  generation model</text>
+  <rect x="365" y="684" width="460" height="56" rx="6" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="595" y="706" font-family="system-ui,sans-serif" font-size="13" fill="#04342C" text-anchor="middle" font-weight="600">Llama3.1 8B</text>
+  <text x="595" y="724" font-family="system-ui,sans-serif" font-size="11" fill="#085041" text-anchor="middle">agent reasoning, tool calling  6GB  agent model</text>
+  <path d="M480 300 L480 390 L690 390 L690 538" fill="none" stroke="#854F0B" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arrow)"/>
+  <text x="720" y="430" font-family="system-ui,sans-serif" font-size="10" fill="#854F0B">embed</text>
+  <path d="M500 300 L500 400 L710 400 L710 610" fill="none" stroke="#993C1D" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arrow)"/>
+  <text x="740" y="510" font-family="system-ui,sans-serif" font-size="10" fill="#993C1D">generate</text>
+  <path d="M130 162 L130 756 L363 712" fill="none" stroke="#1D9E75" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arrow-green)"/>
+  <text x="60" y="500" font-family="system-ui,sans-serif" font-size="10" fill="#1D9E75" text-anchor="middle" transform="rotate(-90,60,500)">agent reasoning</text>
+  <rect x="30" y="560" width="200" height="64" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+  <text x="130" y="582" font-family="system-ui,sans-serif" font-size="13" fill="#173404" text-anchor="middle" font-weight="600">Clinical documents</text>
+  <text x="130" y="600" font-family="system-ui,sans-serif" font-size="11" fill="#3B6D11" text-anchor="middle">SOPs, GCP guidelines</text>
+  <text x="130" y="616" font-family="system-ui,sans-serif" font-size="11" fill="#3B6D11" text-anchor="middle">CDISC docs (.txt / .pdf)</text>
+  <rect x="30" y="650" width="200" height="44" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="130" y="676" font-family="system-ui,sans-serif" font-size="12" fill="#2C2C2A" text-anchor="middle" font-weight="600">scripts/ingest_all.py</text>
+  <line x1="130" y1="624" x2="130" y2="648" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <path d="M230 672 L310 672 L310 280 L338 260" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <rect x="30" y="770" width="840" height="50" rx="8" fill="none" stroke="#ddd" stroke-width="0.5" stroke-dasharray="4 3"/>
+  <text x="450" y="790" font-family="system-ui,sans-serif" font-size="11" fill="#888" text-anchor="middle">Production path: Docker images to registry to Kubernetes manifests</text>
+  <text x="450" y="808" font-family="system-ui,sans-serif" font-size="11" fill="#888" text-anchor="middle">Ollama stays on-prem (GPU)  FastAPI + Qdrant to AKS</text>
+</svg>
