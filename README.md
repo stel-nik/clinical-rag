@@ -21,17 +21,33 @@ ClinicalRAG runs entirely on local hardware:
 
 ## Architecture
 
-```
-User / Agent
-     ↓
-FastAPI (REST API)
-     ↓              ↓
-  Qdrant         Ollama (GPU)
-(vector DB)    ├── nomic-embed-text  (embeddings)
-               └── mistral 7B        (generation)
-```
+![ClinicalRAG Architecture](docs/architecture.svg)
 
-**RAG pipeline:**
+ClinicalRAG has three ways to interact — all backed by the same on-prem pipeline:
+
+**REST API** — call `POST /chat` directly or use Swagger UI at `http://localhost:8000/docs`
+
+**Claude Desktop + MCP** — Claude acts as the AI agent. It automatically launches the MCP server as a background process, discovers the `query_rag` and `ingest_document` tools, and calls them when you ask clinical questions.
+
+**Private terminal agent** — Llama3.1 acts as the agent entirely on your GPU. It also launches the MCP server automatically as a background process, calls `query_rag`, and returns answers. Nothing leaves your machine.
+
+When using Claude Desktop, the generated answer passes through Anthropic's servers. The private agent and REST API are fully on-prem with no external services.
+
+---
+
+### Models
+
+| Model | Role | Size |
+|-------|------|------|
+| `nomic-embed-text` | Converts text to vectors for semantic search | 300MB |
+| `mistral 7B` | Reads retrieved context and generates answers | 4GB |
+| `llama3.1 8B` | Agent reasoning — decides which tools to call | 6GB |
+
+All three run via Ollama on your GPU.
+
+---
+
+### RAG pipeline
 
 1. Documents are chunked into overlapping segments
 2. Each chunk is embedded using `nomic-embed-text` via Ollama
@@ -40,13 +56,19 @@ FastAPI (REST API)
 5. The top chunks are sent to Mistral as context
 6. Mistral generates an answer with citations from the source documents
 
-**MCP server:**
+---
 
-An MCP (Model Context Protocol) server exposes the RAG pipeline as tools that AI agents can call. This allows Claude Desktop or a private Llama3.1 agent to query your documents using natural language.
+### MCP server
 
-**Private agent:**
+An MCP (Model Context Protocol) server exposes the RAG pipeline as tools that AI agents can call. Both Claude Desktop and the private agent launch it automatically as a subprocess — you never run it manually. The MCP server is the standardization layer that allows any MCP-compatible AI client to connect to your on-prem RAG system.
+
+---
+
+### Private agent
 
 A fully on-premises agent using Llama3.1 as the reasoning model. It connects to the MCP server, discovers tools automatically, and decides when to call `query_rag` to answer questions. No external services involved.
+
+Known limitation: Llama3.1 8B has inconsistent tool calling compared to larger models. It gets correct answers but sometimes calls the tool more times than needed. A larger model like Llama3.1 70B would be more reliable but requires more VRAM.
 
 ---
 
@@ -129,25 +151,56 @@ docker compose -f infra/docker-compose.yml up -d
 uvicorn api.main:app --reload
 ```
 
-Then in separate terminals, start whichever interface you want:
+Then use whichever interface you want:
 
+**Claude Desktop** — just open the app. It automatically launches `mcp_server/server.py` 
+in the background based on your config file. No manual step needed.
+
+**Private terminal agent** — run in a new terminal:
 ```bash
-# option A — Claude Desktop integration
-python mcp_server/server.py
-
-# option B — fully private terminal agent
 python agent/agent.py
 ```
+This also launches `mcp_server/server.py` automatically as a subprocess. No manual step needed.
+
+You never need to run `mcp_server/server.py` directly — it is always launched automatically 
+by whoever needs it.
+
+---
 
 ### Option 2 — Full Docker deployment
 
-Everything runs in Docker including FastAPI. Use this to test the production setup or when you're done developing.
+Everything runs in Docker including FastAPI. Use this to test the production setup 
+or when you are done developing.
 
+**First time or after code changes** — rebuild and start:
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-Note: in this mode FastAPI uses `.env.docker` (with Docker service names) instead of `.env`. The MCP server and agent still run locally and connect to FastAPI via `localhost:8000`.
+**Daily use** — start without rebuilding (faster):
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+**Ingest your documents** (skip if you already ran `setup.ps1` — 
+data persists in the Docker volume between restarts):
+```bash
+python scripts/ingest_all.py
+```
+
+**Then use whichever interface you want:**
+
+Claude Desktop — just open the app, it connects automatically.
+
+Private agent — run in a new terminal:
+```bash
+python agent/agent.py
+```
+
+Note: in this mode FastAPI uses `.env.docker` (Docker service names like 
+`http://ollama:11434`) instead of `.env` (localhost URLs). The agent runs 
+locally and connects to FastAPI via `localhost:8000` — this works because 
+Docker maps port 8000 from the container to your machine.
 
 ---
 
@@ -343,7 +396,7 @@ The services are designed to be stateless with health check endpoints, making th
 
 - Fully private — no data leaves the network
 - GPU-accelerated inference with good response times
-- Clean API with auto-generated documentation
+- Clean REST API with auto-generated Swagger UI at `/docs` — test all endpoints directly in the browser without any extra tooling
 - MCP integration works reliably with Claude Desktop
 - Private agent works with Llama3.1
 

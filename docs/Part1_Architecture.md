@@ -1,8 +1,10 @@
 # ClinicalRAG — Architecture Deep Dive
 
-This document explains how ClinicalRAG works internally — every component, every design decision, and why things are built the way they are. It is written to be useful both as a study guide before a technical interview and as a reference for anyone who wants to understand or extend the system.
+This document explains how ClinicalRAG works internally — every component, every design decision, and why things are built the way they are. It is written to be useful both as a study guide and as a reference for anyone who wants to understand or extend the system.
 
 ---
+
+![ClinicalRAG Architecture](architecture.svg)
 
 ## Part 1 — Foundations
 
@@ -256,20 +258,6 @@ response = await client.post(ollama_url)
 ```
 
 The practical rule: any function that calls an external service (Ollama, Qdrant, a database) should be async. Pure computation (chunking, string manipulation) does not need to be async.
-
----
-
-### Why Qdrant over other vector databases
-
-Several options exist: pgvector (Postgres extension), Pinecone (cloud), Weaviate, Chroma, Qdrant.
-
-**pgvector** — best choice for teams already running Postgres. Data lives in your existing database. But requires more setup and is slower for pure vector search.
-
-**Pinecone** — managed cloud service. Easiest to set up. But sends your data to Pinecone's servers — not acceptable for on-prem clinical data.
-
-**ChromaDB** — simplest for prototyping, runs in-process. But not production-grade and harder to run in Kubernetes.
-
-**Qdrant** — production-grade, has an excellent Docker image, scales well, has a nice dashboard at `localhost:6333/dashboard`, and has a clean Python SDK. Good Kubernetes story. The right choice for a production on-prem deployment.
 
 ---
 
