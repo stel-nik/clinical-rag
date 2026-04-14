@@ -228,6 +228,7 @@ def search_chunks(query_vector: list[float], top_k: int = 3) -> list[dict]:
 ### `core/vector_store.py`
 
 ```python
+import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from api.settings import settings
@@ -248,12 +249,16 @@ def ensure_collection():
             )
         )
 
-def store_chunks(chunks: list[str], embeddings: list[list[float]], document_name: str):
+def store_chunks(
+    chunks: list[str],
+    embeddings: list[list[float]],
+    document_name: str
+):
     """Store chunks and their embeddings in Qdrant."""
     points = []
     for i, (chunk, vector) in enumerate(zip(chunks, embeddings)):
         point = PointStruct(
-            id=i,
+            id=str(uuid.uuid4()),  # unique ID per chunk — prevents overwriting when ingesting multiple documents
             vector=vector,
             payload={
                 "text": chunk,
@@ -269,19 +274,109 @@ def store_chunks(chunks: list[str], embeddings: list[list[float]], document_name
     )
 ```
 
-**`ensure_collection`:** checks if the collection exists before creating it. Called every time a document is ingested. Safe to call multiple times — if the collection exists, nothing happens. This pattern is called idempotent.
+---
 
-**`Distance.COSINE`:** cosine similarity measures the angle between two vectors regardless of their magnitude. Standard choice for text embeddings.
+**What this file does:** manages the Qdrant vector database — creates the collection if needed and stores document chunks with their embeddings.
 
-**`VectorParams(size=settings.embedding_size)`:** tells Qdrant to expect vectors of exactly 768 numbers. Qdrant rejects any vector with a different dimension — useful validation.
+---
 
-**`zip(chunks, embeddings)`:** pairs each chunk with its embedding. More readable than indexing with `[i]`. `enumerate` adds the position index.
+**`client = QdrantClient(url=settings.qdrant_url)` at module level**
 
-**`PointStruct`:** one item in Qdrant — ID, vector, and payload.
+The client is created once when the module is first imported, not on every function call. Creating a new client on every request would be wasteful — the client holds a connection pool internally and reuses it across calls. Every file that imports from this module shares the same client instance.
 
-**`client.upsert`:** update or insert. Re-ingesting a document updates existing vectors rather than creating duplicates.
+---
 
-**Known limitation:** chunk ID is just the index (0, 1, 2...). If you ingest two documents, the second document's chunks will overwrite the first document's chunks with the same index. In production, use a UUID or composite ID like `f"{document_name}_{chunk_index}"`.
+**`ensure_collection()`**
+
+Before storing any vectors, the collection must exist. This function checks if it does and creates it if not.
+
+```python
+collections = client.get_collections().collections
+names = [c.name for c in collections]
+
+if settings.collection_name not in names:
+    client.create_collection(...)
+```
+
+It is safe to call this multiple times — if the collection already exists nothing happens. This pattern is called **idempotent**: running it once or ten times has the same result. It is called every time a document is ingested so you never have to manually create the collection.
+
+**`VectorParams(size=settings.embedding_size, distance=Distance.COSINE)`** tells Qdrant two things when creating the collection:
+
+- `size=768` — every vector stored here must have exactly 768 numbers. This matches `nomic-embed-text` which always produces 768-dimensional vectors. If you accidentally send a vector of a different size, Qdrant rejects it — useful validation.
+- `distance=Distance.COSINE` — use cosine similarity to measure how close two vectors are. Cosine measures the angle between vectors regardless of their magnitude, which is the standard choice for text embeddings. Two texts about the same topic will have vectors pointing in the same direction even if one is short and one is long.
+
+---
+
+**`store_chunks()`**
+
+Takes three inputs:
+- `chunks` — list of text strings produced by `chunk_text()`
+- `embeddings` — list of 768-number vectors produced by `embed_text()`, one per chunk
+- `document_name` — the filename, stored as metadata
+
+**`zip(chunks, embeddings)`** pairs each chunk with its corresponding embedding:
+
+```python
+chunks     = ["chunk 1 text", "chunk 2 text", "chunk 3 text"]
+embeddings = [[0.21, -0.85, ...], [0.44, 0.12, ...], [-0.33, 0.91, ...]]
+
+zip gives:
+("chunk 1 text", [0.21, -0.85, ...])
+("chunk 2 text", [0.44, 0.12, ...])
+("chunk 3 text", [-0.33, 0.91, ...])
+```
+
+`enumerate` adds the position index `i` so you can track which chunk number this is within the document.
+
+**`PointStruct`** is one item stored in Qdrant. It has three fields:
+
+```python
+PointStruct(
+    id=str(uuid.uuid4()),   # unique identifier
+    vector=vector,           # the 768 numbers
+    payload={...}            # metadata attached to this point
+)
+```
+
+**`id=str(uuid.uuid4())`** generates a globally unique identifier for each chunk. `uuid4()` produces a random UUID like `3f2a1b4c-8e9d-4f2a-b3c1-7d8e9f0a1b2c`. Converting to string because Qdrant accepts both integers and strings as IDs.
+
+Why UUID and not a simple integer? Originally the code used sequential integers (0, 1, 2...). The problem: every document starts counting from 0. Ingesting a second document created chunks with IDs 0, 1, 2 — overwriting the first document's chunks. UUID guarantees uniqueness regardless of how many documents are ingested or in what order.
+
+**The `payload`** is metadata stored alongside the vector. It comes back with every search result:
+
+```python
+payload={
+    "text": chunk,           # the original text — returned with search results
+    "document": document_name,  # which file this came from — shown as citation
+    "chunk_index": i         # position within the document
+}
+```
+
+When Qdrant finds similar vectors, you get the payload back. The `text` is what gets sent to Mistral as context. The `document` is what appears in the citations in the API response.
+
+**`client.upsert`** means "update or insert". If a point with that ID already exists, update it. If not, insert it. All points for the document are sent in one batch call — more efficient than one call per chunk.
+
+---
+
+**The full flow when a document is ingested:**
+
+```
+ingest_document() in documents.py
+    ↓
+chunk_text(text) → ["chunk 0", "chunk 1", "chunk 2", ...]
+    ↓
+embed_text(chunk) for each chunk → [[0.21, ...], [0.44, ...], ...]
+    ↓
+ensure_collection() → creates collection if needed
+    ↓
+store_chunks(chunks, embeddings, filename)
+    ↓
+Qdrant stores: UUID → vector + payload
+               UUID → vector + payload
+               UUID → vector + payload
+```
+
+At query time, Qdrant searches by vector similarity and returns the payload — the original text — which gets sent to Mistral.
 
 ---
 
