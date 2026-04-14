@@ -261,6 +261,23 @@ When a user calls `POST /chat`:
 7. **Response** — `{"answer": "...", "sources": [...]}`
 
 Mistral never searches Qdrant. It only reads what FastAPI gives it. The retrieval and the generation are completely separate steps — that is the core idea of RAG.
+---
+
+### MCP server flow
+
+![MCP server flow](pics/mcp_flow.svg)
+
+The MCP server is a thin connector between AI clients and your RAG pipeline. It never runs on its own — it is always launched automatically by whoever needs it.
+
+1. **Client launches the server** — Claude Desktop or the private agent starts `server.py` as a subprocess via stdio
+2. **MCP handshake** — client and server agree on protocol version, server reports its capabilities
+3. **Tools are exposed** — `query_rag` and `ingest_document` are registered via `@mcp.tool()` decorators. The AI client reads the function name and docstring to understand what each tool does
+4. **Tool call arrives** — the AI client decides to call a tool and sends the request via stdio
+5. **Tool execution** — `query_rag` calls `POST /chat`, `ingest_document` calls `POST /documents/ingest`
+6. **FastAPI runs the pipeline** — the MCP server has no knowledge of Qdrant, Ollama, or embeddings. It just calls FastAPI and returns the result
+7. **Result returned** — a formatted string back to the AI client via stdio
+
+The MCP server knows nothing about how RAG works internally. If you replace the entire FastAPI implementation, the MCP server does not change. This separation is intentional.
 
 ---
 
@@ -282,26 +299,6 @@ When you run `python agent/agent.py`:
 The `messages` list grows with each iteration. Llama reads the full history every time — it sees its own previous tool calls and their results and uses this to decide what to do next.
 
 ---
-
-### MCP server flow
-
-![MCP server flow](pics/mcp_flow.svg)
-
-The MCP server is a thin connector between AI clients and your RAG pipeline. It never runs on its own — it is always launched automatically by whoever needs it.
-
-1. **Client launches the server** — Claude Desktop or the private agent starts `server.py` as a subprocess via stdio
-2. **MCP handshake** — client and server agree on protocol version, server reports its capabilities
-3. **Tools are exposed** — `query_rag` and `ingest_document` are registered via `@mcp.tool()` decorators. The AI client reads the function name and docstring to understand what each tool does
-4. **Tool call arrives** — the AI client decides to call a tool and sends the request via stdio
-5. **Tool execution** — `query_rag` calls `POST /chat`, `ingest_document` calls `POST /documents/ingest`
-6. **FastAPI runs the pipeline** — the MCP server has no knowledge of Qdrant, Ollama, or embeddings. It just calls FastAPI and returns the result
-7. **Result returned** — a formatted string back to the AI client via stdio
-
-The MCP server knows nothing about how RAG works internally. If you replace the entire FastAPI implementation, the MCP server does not change. This separation is intentional.
-
----
-
-
 
 ### What async means and why FastAPI uses it
 
