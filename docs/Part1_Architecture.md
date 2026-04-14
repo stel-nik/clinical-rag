@@ -261,6 +261,7 @@ When a user calls `POST /chat`:
 7. **Response** — `{"answer": "...", "sources": [...]}`
 
 Mistral never searches Qdrant. It only reads what FastAPI gives it. The retrieval and the generation are completely separate steps — that is the core idea of RAG.
+
 ---
 
 ### MCP server flow
