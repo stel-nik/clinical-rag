@@ -21,7 +21,7 @@ ClinicalRAG runs entirely on local hardware:
 
 ## Architecture
 
-![ClinicalRAG Architecture](docs/architecture.svg)
+![ClinicalRAG Architecture](docs/pics/architecture.svg)
 
 ClinicalRAG has three ways to interact, all backed by the same on-prem pipeline:
 

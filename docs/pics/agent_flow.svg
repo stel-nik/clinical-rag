@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="760" viewBox="0 0 700 760">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="700" height="760" fill="#ffffff"/>
+
+  <text x="350" y="22" font-family="system-ui,sans-serif" font-size="13" fill="#444" text-anchor="middle" font-weight="600">Private agent — python agent/agent.py</text>
+
+  <!-- User goal -->
+  <rect x="250" y="36" width="200" height="44" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="350" y="62" font-family="system-ui,sans-serif" font-size="13" fill="#2C2C2A" text-anchor="middle" font-weight="600">User types goal</text>
+
+  <line x1="350" y1="80" x2="350" y2="118" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Launch MCP -->
+  <rect x="250" y="120" width="200" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="350" y="144" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">launch MCP server</text>
+  <text x="350" y="162" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">subprocess via stdio</text>
+
+  <line x1="350" y1="176" x2="350" y2="214" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- list_tools -->
+  <rect x="250" y="216" width="200" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="350" y="240" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">list_tools()</text>
+  <text x="350" y="258" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">discovers query_rag only</text>
+
+  <line x1="350" y1="272" x2="350" y2="310" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Agent loop box -->
+  <rect x="60" y="312" width="580" height="320" rx="12" fill="none" stroke="#ccc" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="350" y="332" font-family="system-ui,sans-serif" font-size="11" fill="#aaa" text-anchor="middle">agent loop — while True</text>
+
+  <!-- Llama3.1 reasons -->
+  <rect x="250" y="342" width="200" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="350" y="366" font-family="system-ui,sans-serif" font-size="13" fill="#04342C" text-anchor="middle" font-weight="600">Llama3.1 reasons</text>
+  <text x="350" y="384" font-family="system-ui,sans-serif" font-size="11" fill="#085041" text-anchor="middle">POST /api/chat + tools</text>
+
+  <!-- tool_calls branch left -->
+  <path d="M350 398 L350 420 L160 420 L160 476" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="238" y="414" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">tool_calls?</text>
+
+  <!-- call_tool -->
+  <rect x="80" y="478" width="160" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="160" y="502" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">call_tool()</text>
+  <text x="160" y="520" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">MCP → FastAPI /chat</text>
+
+  <!-- tool result back -->
+  <path d="M160 534 L160 570 L248 570" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="160" y="556" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">tool result</text>
+
+  <!-- append to messages -->
+  <rect x="250" y="552" width="200" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="350" y="578" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">append to messages</text>
+
+  <!-- loop back arrow -->
+  <path d="M450 574 L510 574 L510 370 L452 370" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="3 2" marker-end="url(#arrow)"/>
+  <text x="530" y="478" font-family="system-ui,sans-serif" font-size="11" fill="#888" text-anchor="middle">↻</text>
+
+  <!-- no tool calls branch right -->
+  <path d="M350 398 L350 420 L540 420 L540 476" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="462" y="414" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">no tool calls</text>
+
+  <!-- final answer -->
+  <rect x="460" y="478" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="540" y="502" font-family="system-ui,sans-serif" font-size="13" fill="#2C2C2A" text-anchor="middle" font-weight="600">final answer</text>
+  <text x="540" y="520" font-family="system-ui,sans-serif" font-size="11" fill="#5F5E5A" text-anchor="middle">break loop</text>
+
+  <line x1="350" y1="632" x2="350" y2="670" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="400" y="654" font-family="system-ui,sans-serif" font-size="10" fill="#888">MAX_ITERATIONS hit</text>
+
+  <!-- force_answer -->
+  <rect x="250" y="672" width="200" height="56" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="350" y="696" font-family="system-ui,sans-serif" font-size="13" fill="#2C2C2A" text-anchor="middle" font-weight="600">force_answer</text>
+  <text x="350" y="714" font-family="system-ui,sans-serif" font-size="11" fill="#5F5E5A" text-anchor="middle">no tools, must answer</text>
+</svg>

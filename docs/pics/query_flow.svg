@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="600" viewBox="0 0 700 600">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#854F0B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="700" height="600" fill="#ffffff"/>
+
+  <text x="350" y="22" font-family="system-ui,sans-serif" font-size="13" fill="#444" text-anchor="middle" font-weight="600">Query pipeline — POST /chat</text>
+
+  <!-- User question -->
+  <rect x="40" y="40" width="160" height="56" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="120" y="64" font-family="system-ui,sans-serif" font-size="13" fill="#2C2C2A" text-anchor="middle" font-weight="600">User question</text>
+  <text x="120" y="82" font-family="system-ui,sans-serif" font-size="11" fill="#5F5E5A" text-anchor="middle">"How fast to report?"</text>
+
+  <line x1="200" y1="68" x2="238" y2="68" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="219" y="60" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">POST</text>
+
+  <!-- FastAPI -->
+  <rect x="240" y="40" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="330" y="64" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">FastAPI /chat</text>
+  <text x="330" y="82" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">validates request</text>
+
+  <line x1="330" y1="96" x2="330" y2="134" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- embed question -->
+  <rect x="240" y="136" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="330" y="160" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">embed_text(question)</text>
+  <text x="330" y="178" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">same model as chunks</text>
+
+  <line x1="420" y1="164" x2="458" y2="164" stroke="#854F0B" stroke-width="1" marker-end="url(#arrow-amber)"/>
+  <text x="439" y="156" font-family="system-ui,sans-serif" font-size="10" fill="#854F0B" text-anchor="middle">POST /api/embed</text>
+
+  <!-- nomic -->
+  <rect x="460" y="136" width="200" height="56" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+  <text x="560" y="160" font-family="system-ui,sans-serif" font-size="13" fill="#412402" text-anchor="middle" font-weight="600">nomic-embed-text</text>
+  <text x="560" y="178" font-family="system-ui,sans-serif" font-size="11" fill="#854F0B" text-anchor="middle">question → 768 numbers</text>
+
+  <path d="M560 192 L560 224 L330 224 L330 200" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="455" y="218" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">query vector</text>
+
+  <!-- search_chunks -->
+  <rect x="240" y="232" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="330" y="256" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">search_chunks()</text>
+  <text x="330" y="274" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">top_k=3</text>
+
+  <line x1="420" y1="260" x2="458" y2="260" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="439" y="252" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">cosine search</text>
+
+  <!-- Qdrant -->
+  <rect x="460" y="232" width="200" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="560" y="256" font-family="system-ui,sans-serif" font-size="13" fill="#042C53" text-anchor="middle" font-weight="600">Qdrant</text>
+  <text x="560" y="274" font-family="system-ui,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">returns top 3 chunks</text>
+
+  <path d="M560 288 L560 320 L330 320 L330 296" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="455" y="314" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">text + score</text>
+
+  <!-- build prompt -->
+  <rect x="240" y="332" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="330" y="356" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">build prompt</text>
+  <text x="330" y="374" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">context + question</text>
+
+  <line x1="330" y1="388" x2="330" y2="426" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- call Mistral -->
+  <rect x="240" y="428" width="180" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="330" y="452" font-family="system-ui,sans-serif" font-size="13" fill="#26215C" text-anchor="middle" font-weight="600">call Mistral</text>
+  <text x="330" y="470" font-family="system-ui,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">POST /api/generate</text>
+
+  <line x1="420" y1="456" x2="458" y2="456" stroke="#993C1D" stroke-width="1" marker-end="url(#arrow-coral)"/>
+
+  <!-- Mistral -->
+  <rect x="460" y="428" width="200" height="56" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="560" y="452" font-family="system-ui,sans-serif" font-size="13" fill="#4A1B0C" text-anchor="middle" font-weight="600">Mistral 7B</text>
+  <text x="560" y="470" font-family="system-ui,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">reads context, generates</text>
+
+  <path d="M560 484 L560 516 L330 516 L330 492" fill="none" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="455" y="510" font-family="system-ui,sans-serif" font-size="10" fill="#888" text-anchor="middle">answer text</text>
+
+  <line x1="330" y1="492" x2="330" y2="532" stroke="#888" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Response -->
+  <rect x="240" y="534" width="180" height="44" rx="8" fill="#F1EFE8" stroke="#888" stroke-width="0.5"/>
+  <text x="330" y="556" font-family="system-ui,sans-serif" font-size="13" fill="#2C2C2A" text-anchor="middle" font-weight="600">answer + citations</text>
+</svg>
