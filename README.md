@@ -60,7 +60,7 @@ All three run via Ollama on your GPU.
 
 ### MCP server
 
-An MCP (Model Context Protocol) server exposes the RAG pipeline as tools that AI agents can call. Both Claude Desktop and the private agent launch it automatically as a subprocess — you never run it manually. The MCP server is the standardization layer that allows any MCP-compatible AI client to connect to your on-prem RAG system.
+An MCP (Model Context Protocol) server exposes the RAG pipeline as tools that AI agents can call. Both Claude Desktop and the private agent launch it automatically as a subprocess, you never run it manually. The MCP server is the standardization layer that allows any MCP-compatible AI client to connect to your on-prem RAG system.
 
 ---
 
@@ -84,6 +84,115 @@ Known limitation: Llama3.1 8B has inconsistent tool calling compared to larger m
 | API | FastAPI | REST endpoints for ingestion and chat |
 | MCP server | Python MCP SDK | Exposes RAG as tools for AI agents |
 | Infrastructure | Docker Compose | Runs all services locally |
+
+---
+
+## Project structure
+
+```
+clinical-rag/
+├── api/
+│   ├── main.py              # FastAPI app, router registration
+│   ├── settings.py          # Config via pydantic-settings
+│   ├── core/
+│   │   ├── chunking.py      # Split text into overlapping chunks
+│   │   ├── embeddings.py    # Embed text via Ollama
+│   │   ├── retrieval.py     # Search Qdrant for similar chunks
+│   │   └── vector_store.py  # Store chunks and vectors in Qdrant
+│   └── routes/
+│       ├── health.py        # /healthz and /metrics
+│       ├── documents.py     # /documents/ingest
+│       └── rag.py          # /chat
+├── agent/
+│   └── agent.py             # Private on-prem agent using Llama3.1 + MCP
+├── mcp_server/
+│   └── server.py            # MCP server exposing RAG as tools
+├── scripts/
+│   └── ingest_all.py        # Batch ingest all files in data/samples/
+├── data/
+│   └── samples/             # Place .txt documents here
+├── infra/
+│   ├── docker-compose.yml   # Ollama + Qdrant + API
+│   └── k8s/                 # Kubernetes manifests
+├── Dockerfile               # FastAPI container
+├── requirements.txt
+├── setup.ps1                # One-command setup script
+├── .env.example
+└── .env.docker.example
+```
+
+---
+
+### Ingestion pipeline
+
+![Ingestion pipeline](docs/pics/ingestion_flow.svg)
+
+When a document is uploaded to `POST /documents/ingest`:
+
+1. **FastAPI receives the file**: Validates the extension and reads the bytes.
+2. **`chunk_text()`**: Splits the text into 500-word overlapping segments.
+3. **`embed_text()`**: For each chunk, sends the text to Ollama via `POST /api/embed`.
+4. **`nomic-embed-text`**: Converts the text to 768 numbers (the embedding vector).
+5. **`store_chunks()`**: Builds a `PointStruct` with a UUID, the vector, and the original text as payload.
+6. **Qdrant stores**: `UUID → vector + payload` - the chunk is now searchable.
+7. **Response**: `{"status": "indexed", "filename": ..., "chunks": ...}`.
+
+The same `embed_text()` function is used here and in the query pipeline. This is critical as chunks and questions must be embedded by the same model so their vectors are in the same space and similarity search works correctly.
+
+---
+
+### Query pipeline
+
+![Query pipeline](docs/pics/query_flow.svg)
+
+When a user calls `POST /chat`:
+
+1. **FastAPI validates**: Checks the request body via Pydantic.
+2. **`embed_text(question)`**: Embeds the question using the same `nomic-embed-text` model that was used during ingestion.
+3. **`search_chunks()`**: Sends the question vector to Qdrant, which returns the 3 most similar chunks using cosine similarity.
+4. **Build prompt**: Combines the retrieved chunks as context with the original question.
+5. **Call Mistral**: Sends the prompt to Ollama via `POST /api/generate`.
+6. **Mistral generates**: Reads the context and produces a natural language answer.
+7. **Response**: `{"answer": "...", "sources": [...]}`.
+
+Mistral never searches Qdrant. It only reads what FastAPI gives it. The retrieval and the generation are completely separate steps.
+
+---
+
+### MCP server flow
+
+![MCP server flow](docs/pics/mcp_flow.svg)
+
+The MCP server is a thin connector between AI clients and your RAG pipeline. It never runs on its own, it is always launched automatically by whoever needs it.
+
+1. **Client launches the server**: Claude Desktop or the private agent starts `server.py` as a subprocess via stdio.
+2. **MCP handshake**: Client and server agree on protocol version, server reports its capabilities.
+3. **Tools are exposed**: `query_rag` and `ingest_document` are registered via `@mcp.tool()` decorators. The AI client reads the function name and docstring to understand what each tool does.
+4. **Tool call arrives**: The AI client decides to call a tool and sends the request via stdio.
+5. **Tool execution**: `query_rag` calls `POST /chat`, `ingest_document` calls `POST /documents/ingest`.
+6. **FastAPI runs the pipeline**: The MCP server has no knowledge of Qdrant, Ollama, or embeddings. It just calls FastAPI and returns the result.
+7. **Result returned**: A formatted string back to the AI client via stdio.
+
+The MCP server knows nothing about how RAG works internally. If you replace the entire FastAPI implementation, the MCP server does not change. This separation is intentional.
+
+---
+
+### Agent flow
+
+![Agent flow](docs/pics/agent_flow.svg)
+
+When you run `python agent/agent.py`:
+
+1. **User types a goal**: The question or task the agent should solve.
+2. **MCP server launches**: `agent.py` starts `mcp_server/server.py` as a subprocess and connects via stdio.
+3. **`list_tools()`**: The agent discovers available tools automatically. It filters to `query_rag` only. `ingest_document` is hidden to prevent wrong tool calls with Llama3.1 8B.
+4. **Agent loop starts**: The full conversation history plus available tools is sent to Llama3.1 via `POST /api/chat`.
+5. **Llama3.1 decides**: Either call a tool or give a final answer.
+   - **Tool call** → `call_tool()` sends it to the MCP server via stdio → MCP calls FastAPI `/chat` → result appended to `messages` → loop continues
+   - **No tool call** → Llama has enough information → print answer → break
+6. **MAX_ITERATIONS safety**: if the loop runs more than 5 times, `force_answer` removes tools from the request. Llama must produce a text answer from whatever it already retrieved.
+
+The `messages` list grows with each iteration. Llama reads the full history every time, it sees its own previous tool calls and their results and uses this to decide what to do next.
 
 ---
 
@@ -199,7 +308,7 @@ python agent/agent.py
 
 Note: in this mode FastAPI uses `.env.docker` (Docker service names like 
 `http://ollama:11434`) instead of `.env` (localhost URLs). The agent runs 
-locally and connects to FastAPI via `localhost:8000` — this works because 
+locally and connects to FastAPI via `localhost:8000`. This works because 
 Docker maps port 8000 from the container to your machine.
 
 ---
@@ -302,7 +411,7 @@ The MCP server exposes two tools to AI agents:
 
 Both tools are available to Claude Desktop.
 
-The private agent (`agent/agent.py`) only exposes `query_rag`. This is intentional — 
+The private agent (`agent/agent.py`) only exposes `query_rag`. This is intentional as 
 Llama3.1 8B sometimes calls the wrong tool with incorrect arguments when multiple tools 
 are available. Since the agent is designed for Q&A, ingestion is handled separately 
 via `scripts/ingest_all.py` which is more reliable.
@@ -353,42 +462,6 @@ that informed consent is obtained from each subject...
 The agent uses Llama3.1 as the reasoning model. There are no external services or data leaving your machine.
 
 **Known limitation:** Llama3.1 8B has inconsistent tool calling compared to larger models. It gets the right answer but may call the tool more times than needed. A larger model like Llama3.1 70B would be more reliable but requires more VRAM.
-
----
-
-## Project structure
-
-```
-clinical-rag/
-├── api/
-│   ├── main.py              # FastAPI app, router registration
-│   ├── settings.py          # Config via pydantic-settings
-│   ├── core/
-│   │   ├── chunking.py      # Split text into overlapping chunks
-│   │   ├── embeddings.py    # Embed text via Ollama
-│   │   ├── retrieval.py     # Search Qdrant for similar chunks
-│   │   └── vector_store.py  # Store chunks and vectors in Qdrant
-│   └── routes/
-│       ├── health.py        # /healthz and /metrics
-│       ├── documents.py     # /documents/ingest
-│       └── rag.py          # /chat
-├── agent/
-│   └── agent.py             # Private on-prem agent using Llama3.1 + MCP
-├── mcp_server/
-│   └── server.py            # MCP server exposing RAG as tools
-├── scripts/
-│   └── ingest_all.py        # Batch ingest all files in data/samples/
-├── data/
-│   └── samples/             # Place .txt documents here
-├── infra/
-│   ├── docker-compose.yml   # Ollama + Qdrant + API
-│   └── k8s/                 # Kubernetes manifests
-├── Dockerfile               # FastAPI container
-├── requirements.txt
-├── setup.ps1                # One-command setup script
-├── .env.example
-└── .env.docker.example
-```
 
 ---
 
