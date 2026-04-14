@@ -20,7 +20,7 @@ api/
 └── routes/
     ├── health.py        # /healthz and /metrics endpoints
     ├── documents.py     # /documents/ingest endpoint
-    └── chat.py          # /chat endpoint
+    └── rag.py          # /chat endpoint
 
 agent/
 └── agent.py             # private on-prem agent using Llama3.1
@@ -323,7 +323,7 @@ async def ingest_document(file: UploadFile = File(...)):
 
 ---
 
-### `routes/chat.py`
+### `routes/rag.py`
 
 The chat endpoint implements the full RAG query pipeline in 5 clear steps:
 
