@@ -371,7 +371,7 @@ clinical-rag/
 │   └── routes/
 │       ├── health.py        # /healthz and /metrics
 │       ├── documents.py     # /documents/ingest
-│       └── chat.py          # /chat
+│       └── rag.py          # /chat
 ├── agent/
 │   └── agent.py             # Private on-prem agent using Llama3.1 + MCP
 ├── mcp_server/
