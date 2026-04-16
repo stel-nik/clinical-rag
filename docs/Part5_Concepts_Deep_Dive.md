@@ -1271,5 +1271,33 @@ Running the manifests locally demonstrated several real Kubernetes behaviours:
 **Unchanged application code** — FastAPI ran identically inside Kubernetes as it does locally. No code changes were needed. The only difference was the environment variables came from the ConfigMap instead of `.env`.
 
 
+### GPU on Kubernetes — Windows limitation (final conclusion)
+
+All available approaches were attempted to get Ollama running on GPU 
+inside a Kubernetes pod on Windows:
+
+1. Docker Desktop + minikube from PowerShell — GPU not visible
+2. Docker Desktop + minikube from WSL2 (Ubuntu) — GPU not visible  
+3. Native Docker Engine in WSL2 + minikube — GPU not visible
+
+In all cases the NVIDIA device plugin runs correctly but reports 
+zero GPU capacity. The GPU passthrough stops at the minikube container 
+boundary regardless of which Docker daemon is used.
+
+Root cause: Kubernetes runs inside a Docker container on Windows. 
+The NVIDIA device plugin inside that container cannot access the 
+physical GPU through the virtualization layers — WSL2 VM + Docker 
+container + Kubernetes. nvidia-smi works in WSL2 and GPU works in 
+regular Docker containers, but the additional container boundary 
+introduced by minikube blocks GPU access.
+
+Resolution: Native Linux required. On a Linux machine the chain is 
+direct — Linux kernel → Docker container → NVIDIA device plugin — 
+with no WSL2 virtualization layer in between.
+
+Current workaround: Ollama runs via Docker Compose with full GPU 
+access on the RTX 3090. Kubernetes manifests are production-ready 
+for deployment on a Linux node.
+
 
 *End of Architecture Deep Dive*

@@ -505,7 +505,10 @@ The services are designed to be stateless with health check endpoints, making th
 - Llama3.1 8B tool calling is inconsistent. Larger models are more reliable.
 - Single Qdrant collection. No per-user or per-project isolation yet.
 - No authentication on the API endpoints.
-- Full GPU support requires WSL2 minikube on Windows (in progress).
+- GPU scheduling for Ollama in Kubernetes requires a Linux node. 
+  On Windows, GPU passthrough to the minikube container is not 
+  supported regardless of Docker configuration. 
+  Docker Compose with GPU is used for local development instead.
 
 **Future Work:**
 
