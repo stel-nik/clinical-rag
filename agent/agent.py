@@ -114,6 +114,21 @@ async def run_agent(user_goal: str):
                     print(f"\nAnswer: {reply['content']}")
                     break
 
+async def chat_loop():
+    print("Agent ready. Type 'exit' or 'quit' to stop.\n")
+
+    while True:
+        goal = input("You: ").strip()
+
+        if goal.lower() in {"exit", "quit", "q"}:
+            print("Bye!")
+            break
+
+        if not goal:
+            continue
+
+        await run_agent(goal)
+        print()
+
 if __name__ == "__main__":
-    goal = input("Enter goal: ")
-    asyncio.run(run_agent(goal))
+    asyncio.run(chat_loop())
