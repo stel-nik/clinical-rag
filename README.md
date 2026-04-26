@@ -311,6 +311,13 @@ Note: in this mode FastAPI uses `.env.docker` (Docker service names like
 locally and connects to FastAPI via `localhost:8000`. This works because 
 Docker maps port 8000 from the container to your machine.
 
+**Fastest Way:**
+You can also start docker containers and the agent by running:
+```
+run_agent.bat
+```
+
+
 ---
 
 ### Option 3: Local Kubernetes with minikube
